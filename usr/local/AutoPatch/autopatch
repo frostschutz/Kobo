@@ -1,0 +1,92 @@
+#!/bin/sh
+
+set -x
+
+#
+# AutoPatch 0.1 beta
+#
+
+AUTOPATCH="/usr/local/AutoPatch"
+TMPFS="$AUTOPATCH/tmpfs"
+PATH="$PATH:/mod/AutoPatch"
+FILES_TO_PATCH="/usr/local/Kobo/libnickel.so.1.0.0 /usr/local/Kobo/libadobe.so /usr/local/Kobo/librmsdk.so.1.0.0"
+
+md5() {
+    cat "$@" | md5sum | sed -e 's/ .*//'
+}
+
+cd "$AUTOPATCH" || exit
+
+# wait for things to settle down
+pidof nickel || sleep 60
+pidof nickel || sleep 60
+pidof nickel || exit
+# sleep 60
+mount -o remount,rw /mnt/onboard || exit
+
+mkdir -p "$TMPFS" /mnt/onboard/.autopatch/failed /mnt/onboard/.autopatch/disabled
+mount -t tmpfs none "$TMPFS"
+
+for file in $FILES_TO_PATCH
+do
+    rm "$TMPFS"/*
+
+    base=$(basename "$file")
+    filemd5=$(md5 "$file")
+    patchmd5=$(md5 /mnt/onboard/.autopatch/"$base"*.patch)
+
+    if [ -e "$base"-"$filemd5"-"$patchmd5" ]
+    then
+        # already done
+        continue
+    fi
+
+    # Prepare file for applying patches.
+    tmpfile="$TMPFS"/"$base"
+    cp "$file" "$tmpfile" || break
+
+    if [ -e "$base"-"$filemd5"-undo ]
+    then
+        # Revert previous patch.
+        cd "$TMPFS" # busybox bug
+        base64-patch "$base" "$AUTOPATCH"/"$base"-"$filemd5"-undo || continue
+        cd "$AUTOPATCH"
+    fi
+
+    cp "$tmpfile" "$tmpfile"-original
+
+    # Apply patches one by one.
+    for patch in /mnt/onboard/.autopatch/"$base"*.patch
+    do
+        if [ ! -f "$patch" ]
+        then
+            continue
+        fi
+
+        mv "$patch" "$patch".todo || continue
+
+        patch32lsb  -i "$tmpfile" -o "$tmpfile" -p "$patch".todo >& "$TMPFS"/output && mv "$patch".todo "$patch" && continue
+
+        # patch failed to apply
+        mv "$patch".todo /mnt/onboard/.autopatch/failed/$(basename "$patch")
+        mv "$TMPFS"/output /mnt/onboard/.autopatch/failed/$(basename "$patch").log
+    done
+
+    # If any changes were made, save.
+    newmd5=$(md5 "$tmpfile")
+    newpatchmd5=$(md5 /mnt/onboard/.autopatch/"$base"*.patch)
+
+    if [ "$newmd5" != "$filemd5" ]
+    then
+        base64-diff "$tmpfile" "$tmpfile"-original > "$TMPFS"/"$base"-"$newmd5"-undo
+        rm "$tmpfile"-original
+        mv "$tmpfile" "$file" || continue
+        rm "$base"-*
+        mv "$TMPFS"/"$base"-*-undo .
+    fi
+
+    touch "$base"-"$newmd5"-"$newpatchmd5"
+    sync
+done
+
+umount "$TMPFS"

@@ -1,0 +1,2 @@
+# udev runs the startup script for us
+KERNEL=="loop0", RUN+="/mod/AutoPatch/autopatch"

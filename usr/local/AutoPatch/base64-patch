@@ -1,0 +1,12 @@
+#!/bin/sh
+
+base64 "$1" > "$1".base64
+
+patch "$1".base64 "$2"
+error=$?
+
+base64 -d "$1".base64 > "$1"
+
+rm "$1".base64
+
+exit $error

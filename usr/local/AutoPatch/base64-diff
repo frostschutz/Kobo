@@ -1,0 +1,8 @@
+#!/bin/sh
+
+base64 "$1" > "$1".base64
+base64 "$2" > "$2".base64
+
+diff -u "$1".base64 "$2".base64
+
+rm "$1".base64 "$2".base64
