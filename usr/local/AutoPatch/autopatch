@@ -8,7 +8,7 @@ set -x
 
 AUTOPATCH="/usr/local/AutoPatch"
 TMPFS="$AUTOPATCH/tmpfs"
-PATH="$PATH:/mod/AutoPatch"
+PATH="$PATH:$AUTOPATCH"
 FILES_TO_PATCH="/usr/local/Kobo/libnickel.so.1.0.0 /usr/local/Kobo/libadobe.so /usr/local/Kobo/librmsdk.so.1.0.0"
 
 md5() {
@@ -21,11 +21,21 @@ cd "$AUTOPATCH" || exit
 pidof nickel || sleep 60
 pidof nickel || sleep 60
 pidof nickel || exit
-# sleep 60
-mount -o remount,rw /mnt/onboard || exit
+sleep 60
 
 mkdir -p "$TMPFS" /mnt/onboard/.autopatch/failed /mnt/onboard/.autopatch/disabled
 mount -t tmpfs none "$TMPFS"
+
+uninstall=0
+
+if [ -e /mnt/onboard/.autopatch/uninstall ]
+then
+    uninstall=1
+    rm /mnt/onboard/.autopatch/uninstall
+    mv /mnt/onboard/.autopatch /mnt/onboard/.autopatch-uninstall-$(date +%s)
+fi
+
+reboot=0
 
 for file in $FILES_TO_PATCH
 do
@@ -81,8 +91,9 @@ do
         base64-diff "$tmpfile" "$tmpfile"-original > "$TMPFS"/"$base"-"$newmd5"-undo
         rm "$tmpfile"-original
         mv "$tmpfile" "$file" || continue
+        reboot=1
         rm "$base"-*
-        mv "$TMPFS"/"$base"-*-undo .
+        test -s "$TMPFS"/"$base"-"$newmd5"-undo && mv "$TMPFS"/"$base"-"$newmd5"-undo "$AUTOPATCH"
     fi
 
     touch "$base"-"$newmd5"-"$newpatchmd5"
@@ -90,3 +101,15 @@ do
 done
 
 umount "$TMPFS"
+
+if [ "$uninstall" == "1" ]
+then
+    rm /etc/udev/rules.d/autopatch.rules
+    rm -rf /usr/local/AutoPatch
+    sync
+fi
+
+if [ "$reboot" == "1" ]
+then
+    reboot
+fi
