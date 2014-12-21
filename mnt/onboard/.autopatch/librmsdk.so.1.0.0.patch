@@ -1,0 +1,31 @@
+# librmsdk.so.1.0.0 in firmware 3.12.0 (563a2baefd)
+
+<Patch>
+patch_name = `Fix page breaks bug`
+patch_enable = `yes`
+#
+# The long paragraph bug has since been fixed in the current firmware. However
+# this patch also has the side effect of disabling widows/orphans processing.
+# (So now enabling it has the same effect as setting orphans:1; widows:1; in
+# the stylesheet of all epub books, i.e. it prevents those extra blank lines
+# being added to the bottom of some pages.)
+#
+replace_bytes = 2C06C0, E6 D0, E6 E7
+#Alternative method
+#replace_bytes = 2C06C0, E6 D0, 00 46
+</Patch>
+
+
+<Patch>
+patch_name = `Ignore book internal CSS stylesheet`
+patch_enable = `no`
+replace_string = 70BA90, `s`, `_`
+replace_string = 70BAA8, `s`, `_`
+</Patch>
+
+
+<Patch>
+patch_name = `Ignore book TOC navpoints`
+patch_enable = `no`
+replace_string = 70DFC0, `n`, `_`
+</Patch>

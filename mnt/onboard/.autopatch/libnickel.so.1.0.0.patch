@@ -1,0 +1,675 @@
+# libnickel.so.1.0.0 in firmware 3.12.0 (563a2baefd)
+
+#
+# The following four patches are alternatives, don't enable more than one.
+#
+
+<Patch>
+patch_name = `Disable reading footer (all devices)`
+patch_enable = `no`
+replace_string = E359A4, `ReadingFooter {\n\tmin-height: 70px;\n\tmax-height: 70px;\n\tqproperty-footerMargin: 105;\n}\n\nReadingFooter[qApp_deviceCodeName="phoenix"] {\n\tmin-height: 82px;\n\tmax-height: 82px;\n}\n\nReadingFooter[qApp_deviceCodeName="dragon"] {\n\tmin-height: 120px;\n\tmax-height: 120px;\n\tqproperty-footerMargin: 170;\n}\n\n* {\n\tfont-size: 16px;\n}\n\n[qApp_deviceCodeName="phoenix"] {\n\tfont-size: 20px;\n}\n\n[qApp_deviceCodeName="dragon"] {\n\tfont-size: 26px;\n}\n\n[qApp_localeName="ja_JP"] {\n\tfont-family: A-OTF Gothic MB101 Pr6N;\n}`, `* {\n\theight: 5px;\n\tfont-size: 1px;\n\tcolor: transparent;\n}\n\n`
+</Patch>
+
+
+<Patch>
+patch_name = `Custom reading footer style (Touch/Mini)`
+patch_enable = `no`
+replace_string = E359A4, `ReadingFooter {\n\tmin-height: 70px;\n\tmax-height: 70px;\n\tqproperty-footerMargin: 105;\n}\n\nReadingFooter[qApp_deviceCodeName="phoenix"] {\n\tmin-height: 82px;\n\tmax-height: 82px;\n}\n\nReadingFooter[qApp_deviceCodeName="dragon"] {\n\tmin-height: 120px;\n\tmax-height: 120px;\n\tqproperty-footerMargin: 170;\n}\n\n* {\n\tfont-size: 16px;\n}\n\n[qApp_deviceCodeName="phoenix"] {\n\tfont-size: 20px;\n}\n\n[qApp_deviceCodeName="dragon"] {\n\tfont-size: 26px;\n}\n\n[qApp_localeName="ja_JP"] {\n\tfont-family: A-OTF Gothic MB101 Pr6N;\n}`, `ReadingFooter {\n\tmin-height: 70px;\n\tmax-height: 70px;\n\tqproperty-footerMargin: 105;\n}\n\n* {\n\tfont-size: 16px;\n\tpadding-bottom: 0px;\n\tmargin-top: 0px;\n\t/*font-family:none;*/\n}\n\n[qApp_localeName="ja_JP"] {\n\tfont-family: A-OTF Gothic MB101 Pr6N;\n}`
+#
+# Uncomment the three replace_string lines of one of the examples below,
+# comment out the rest. If you choose to make further changes to the examples,
+# BE CAREFUL NOT TO ALTER THE LENGTH OF THE REPLACEMENT STRINGS! (Add or remove
+# spaces if necessary to keep the total length the same.)
+#
+# Examples 1 or 4 are recommended for use with the adjustable/fixed top/bottom
+# margin patches when configured to set both top and bottom margins.
+#
+# Examples 4, 5 or 6 are recommended if you also read kepubs, because the space
+# between bezel and footer matches the space between bezel and kepub header.
+#
+#
+# Example 1: Small footer, close to bezel
+#replace_string = E359B5, `min-height: 70px;`, `min-height: 24px;`
+#replace_string = E359C8, `max-height: 70px;`, `max-height: 24px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 4px;`
+#
+# Example 2: Medium footer, close to bezel
+replace_string = E359B5, `min-height: 70px;`, `min-height: 32px;`
+replace_string = E359C8, `max-height: 70px;`, `max-height: 32px;`
+replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 4px;`
+#
+# Example 3: Large footer, close to bezel
+#replace_string = E359B5, `min-height: 70px;`, `min-height: 48px;`
+#replace_string = E359C8, `max-height: 70px;`, `max-height: 48px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 0px;`
+#
+# Example 4: Small footer, away from bezel
+#replace_string = E359B5, `min-height: 70px;`, `min-height: 24px;`
+#replace_string = E359C8, `max-height: 70px;`, `max-height: 24px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom:20px;`
+#
+# Example 5: Medium footer, away from bezel
+#replace_string = E359B5, `min-height: 70px;`, `min-height: 32px;`
+#replace_string = E359C8, `max-height: 70px;`, `max-height: 32px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom:16px;`
+#
+# Example 6: Large footer, away from bezel
+#replace_string = E359B5, `min-height: 70px;`, `min-height: 48px;`
+#replace_string = E359C8, `max-height: 70px;`, `max-height: 48px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 8px;`
+#
+#
+# Uncomment the following line to reduce the footer font size:
+#replace_string = E35A00, `font-size: 16px;`, `font-size: 14px;`
+#
+# Uncomment the following line to further reduce the space above the footer:
+#replace_string = E35A28, `margin-top: 0px;`, `margin-top:-4px;`
+#
+# Uncomment one of the following lines to use a fixed font style. This is
+# recommended if you have chosen examples 1 or 4 above, because some other
+# fonts sit too low in the footer and get cut off at the bottom.
+# Also enable one of the Custom header style patches below with the same font
+# style if you read kepubs.
+#
+#replace_string = E35A3A, `/*font-family:none;*/`, `font-family:  Amasis;`
+#replace_string = E35A3A, `/*font-family:none;*/`, `font-family:  Avenir;`
+#replace_string = E35A3A, `/*font-family:none;*/`, `font-family: Georgia;`
+#
+</Patch>
+
+
+<Patch>
+patch_name = `Custom reading footer style (Glo/Aura)`
+patch_enable = `no`
+replace_string = E359A4, `ReadingFooter {\n\tmin-height: 70px;\n\tmax-height: 70px;\n\tqproperty-footerMargin: 105;\n}\n\nReadingFooter[qApp_deviceCodeName="phoenix"] {\n\tmin-height: 82px;\n\tmax-height: 82px;\n}\n\nReadingFooter[qApp_deviceCodeName="dragon"] {\n\tmin-height: 120px;\n\tmax-height: 120px;\n\tqproperty-footerMargin: 170;\n}\n\n* {\n\tfont-size: 16px;\n}\n\n[qApp_deviceCodeName="phoenix"] {\n\tfont-size: 20px;\n}\n\n[qApp_deviceCodeName="dragon"] {\n\tfont-size: 26px;\n}\n\n[qApp_localeName="ja_JP"] {\n\tfont-family: A-OTF Gothic MB101 Pr6N;\n}`, `ReadingFooter {\n\tmin-height: 82px;\n\tmax-height: 82px;\n\tqproperty-footerMargin: 105;\n}\n\n* {\n\tfont-size: 20px;\n\tpadding-bottom: 0px;\n\tmargin-top: 0px;\n\t/*font-family:none;*/\n}\n\n[qApp_localeName="ja_JP"] {\n\tfont-family: A-OTF Gothic MB101 Pr6N;\n}`
+#
+# Uncomment the three replace_string lines of one of the examples below,
+# comment out the rest. If you choose to make further changes to the examples,
+# BE CAREFUL NOT TO ALTER THE LENGTH OF THE REPLACEMENT STRINGS! (Add or remove
+# spaces if necessary to keep the total length the same.)
+#
+# Examples 1 or 4 are recommended for use with the adjustable/fixed top/bottom
+# margin patches when configured to set both top and bottom margins.
+#
+# Examples 4, 5 or 6 are recommended if you also read kepubs, because the space
+# between bezel and footer matches the space between bezel and kepub header.
+#
+#
+# Example 1: Small footer, close to bezel
+#replace_string = E359B5, `min-height: 82px;`, `min-height: 30px;`
+#replace_string = E359C8, `max-height: 82px;`, `max-height: 30px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 5px;`
+#
+# Example 2: Medium footer, close to bezel
+replace_string = E359B5, `min-height: 82px;`, `min-height: 40px;`
+replace_string = E359C8, `max-height: 82px;`, `max-height: 40px;`
+replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 5px;`
+#
+# Example 3: Large footer, close to bezel
+#replace_string = E359B5, `min-height: 82px;`, `min-height: 60px;`
+#replace_string = E359C8, `max-height: 82px;`, `max-height: 60px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 0px;`
+#
+# Example 4: Small footer, away from bezel
+#replace_string = E359B5, `min-height: 82px;`, `min-height: 30px;`
+#replace_string = E359C8, `max-height: 82px;`, `max-height: 30px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom:25px;`
+#
+# Example 5: Medium footer, away from bezel
+#replace_string = E359B5, `min-height: 82px;`, `min-height: 40px;`
+#replace_string = E359C8, `max-height: 82px;`, `max-height: 40px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom:20px;`
+#
+# Example 6: Large footer, away from bezel
+#replace_string = E359B5, `min-height: 82px;`, `min-height: 60px;`
+#replace_string = E359C8, `max-height: 82px;`, `max-height: 60px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom:10px;`
+#
+#
+# Uncomment the following line to reduce the footer font size:
+#replace_string = E35A00, `font-size: 20px;`, `font-size: 18px;`
+#
+# Uncomment the following line to further reduce the space above the footer:
+#replace_string = E35A28, `margin-top: 0px;`, `margin-top:-5px;`
+#
+# Uncomment one of the following lines to use a fixed font style. This is
+# recommended if you have chosen examples 1 or 4 above, because some other
+# fonts sit too low in the footer and get cut off at the bottom.
+# Also enable one of the Custom header style patches below with the same font
+# style if you read kepubs.
+#
+#replace_string = E35A3A, `/*font-family:none;*/`, `font-family:  Amasis;`
+#replace_string = E35A3A, `/*font-family:none;*/`, `font-family:  Avenir;`
+#replace_string = E35A3A, `/*font-family:none;*/`, `font-family: Georgia;`
+#
+</Patch>
+
+
+<Patch>
+patch_name = `Custom reading footer style (Aura HD/H2O)`
+patch_enable = `no`
+replace_string = E359A4, `ReadingFooter {\n\tmin-height: 70px;\n\tmax-height: 70px;\n\tqproperty-footerMargin: 105;\n}\n\nReadingFooter[qApp_deviceCodeName="phoenix"] {\n\tmin-height: 82px;\n\tmax-height: 82px;\n}\n\nReadingFooter[qApp_deviceCodeName="dragon"] {\n\tmin-height: 120px;\n\tmax-height: 120px;\n\tqproperty-footerMargin: 170;\n}\n\n* {\n\tfont-size: 16px;\n}\n\n[qApp_deviceCodeName="phoenix"] {\n\tfont-size: 20px;\n}\n\n[qApp_deviceCodeName="dragon"] {\n\tfont-size: 26px;\n}\n\n[qApp_localeName="ja_JP"] {\n\tfont-family: A-OTF Gothic MB101 Pr6N;\n}`, `ReadingFooter {\n\tmin-height:120px;\n\tmax-height:120px;\n\tqproperty-footerMargin: 170;\n}\n\n* {\n\tfont-size: 26px;\n\tpadding-bottom: 0px;\n\tmargin-top: 0px;\n\t/*font-family:none;*/\n}\n\n[qApp_localeName="ja_JP"] {\n\tfont-family: A-OTF Gothic MB101 Pr6N;\n}`
+#
+# Uncomment the three replace_string lines of one of the examples below,
+# comment out the rest. If you choose to make further changes to the examples,
+# BE CAREFUL NOT TO ALTER THE LENGTH OF THE REPLACEMENT STRINGS! (Add or remove
+# spaces if necessary to keep the total length the same.)
+#
+# Examples 1 or 4 are recommended for use with the adjustable/fixed top/bottom
+# margin patches when configured to set both top and bottom margins.
+#
+# Examples 4, 5 or 6 are recommended if you also read kepubs, because the space
+# between bezel and footer matches the space between bezel and kepub header.
+#
+#
+# Example 1: Small footer, close to bezel
+#replace_string = E359B5, `min-height:120px;`, `min-height: 40px;`
+#replace_string = E359C8, `max-height:120px;`, `max-height: 40px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 7px;`
+#
+# Example 2: Medium footer, close to bezel
+replace_string = E359B5, `min-height:120px;`, `min-height: 52px;`
+replace_string = E359C8, `max-height:120px;`, `max-height: 52px;`
+replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 7px;`
+#
+# Example 3: Large footer, close to bezel
+#replace_string = E359B5, `min-height:120px;`, `min-height: 80px;`
+#replace_string = E359C8, `max-height:120px;`, `max-height: 80px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom: 0px;`
+#
+# Example 4: Small footer, away from bezel
+#replace_string = E359B5, `min-height:120px;`, `min-height: 40px;`
+#replace_string = E359C8, `max-height:120px;`, `max-height: 40px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom:36px;`
+#
+# Example 5: Medium footer, away from bezel
+#replace_string = E359B5, `min-height:120px;`, `min-height: 52px;`
+#replace_string = E359C8, `max-height:120px;`, `max-height: 52px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom:30px;`
+#
+# Example 6: Large footer, away from bezel
+#replace_string = E359B5, `min-height:120px;`, `min-height: 80px;`
+#replace_string = E359C8, `max-height:120px;`, `max-height: 80px;`
+#replace_string = E35A12, `padding-bottom: 0px;`, `padding-bottom:16px;`
+#
+#
+# Uncomment the following line to reduce the footer font size:
+#replace_string = E35A00, `font-size: 26px;`, `font-size: 23px;`
+#
+# Uncomment the following line to further reduce the space above the footer:
+#replace_string = E35A28, `margin-top: 0px;`, `margin-top:-7px;`
+#
+# Uncomment one of the following lines to use a fixed font style. This is
+# recommended if you have chosen examples 1 or 4 above, because some other
+# fonts sit too low in the footer and get cut off at the bottom.
+# Also enable one of the Custom header style patches below with the same font
+# style if you read kepubs.
+#
+#replace_string = E35A3A, `/*font-family:none;*/`, `font-family:  Amasis;`
+#replace_string = E35A3A, `/*font-family:none;*/`, `font-family:  Avenir;`
+#replace_string = E35A3A, `/*font-family:none;*/`, `font-family: Georgia;`
+#
+</Patch>
+
+
+<Patch>
+patch_name = `Custom header style for Touch`
+patch_enable = `no`
+replace_string = E15E10, `* {\nfont-size: 16px;\nfont-family: Avenir;\nbackground-color: transparent;\npadding-top:3px;\n}\n\n[qApp_localeName="ja_JP"] {\nfont-family: A-OTF Gothic MB101 Pr6N;\nqproperty-leading: 0;\n}`, `* {\nfont-size: 16px;\nfont-family:  Avenir;\nbackground-color: transparent;\npadding-top:3px;\n}`
+#
+# BE CAREFUL NOT TO ALTER THE LENGTH OF THE FOLLOWING REPLACEMENT STRINGS!
+# (Add or remove spaces if necessary to keep the total length the same.)
+#
+replace_string = E15E14, `font-size: 16px;`, `font-size: 16px;`
+#
+#replace_string = E15E25, `font-family:  Avenir;`, `font-family:  Amasis;`
+replace_string = E15E25, `font-family:  Avenir;`, `font-family:  Avenir;`
+#replace_string = E15E25, `font-family:  Avenir;`, `font-family: Georgia;`
+#
+</Patch>
+
+
+<Patch>
+patch_name = `Custom header style for Mini`
+patch_enable = `no`
+replace_string = E168F4, `* {\nfont-size: 20px;\nfont-family: Avenir;\nbackground-color: transparent;\npadding-top:3px;\n}\n\n[qApp_deviceCodeName="pixie"] {\nfont-size: 18px;\n}\n\n[qApp_deviceCodeName="dragon"] {\nfont-family: Georgia;\nfont-size: 26px;\n}\n\n[qApp_localeName="ja_JP"] {\nfont-family: A-OTF Gothic MB101 Pr6N;\n}`, `* {\nfont-size: 20px;\nfont-family:  Avenir;\nbackground-color: transparent;\npadding-top:3px;\n}` 
+#
+# BE CAREFUL NOT TO ALTER THE LENGTH OF THE FOLLOWING REPLACEMENT STRINGS!
+# (Add or remove spaces if necessary to keep the total length the same.)
+#
+replace_string = E168F8, `font-size: 20px;`, `font-size: 18px;`
+#
+#replace_string = E16909, `font-family:  Avenir;`, `font-family:  Amasis;`
+replace_string = E16909, `font-family:  Avenir;`, `font-family:  Avenir;`
+#replace_string = E16909, `font-family:  Avenir;`, `font-family: Georgia;`
+#
+</Patch>
+
+
+<Patch>
+patch_name = `Custom header style for Glo/Aura/AuraHD/H2O`
+patch_enable = `no`
+replace_string = E14BA0, `* {\n\tbackground-color: transparent;\n\tpadding-top:3px;\n}\n\n[qApp_deviceCodeName="dragon"] {\n\tfont-size: 26px;\n}\n\n[qApp_deviceCodeName="phoenix"] {\n\tfont-size: 21px;\n}\n\n[qApp_localeName="ja_JP"] {\n\tfont-family: A-OTF Gothic MB101 Pr6N;\n\tqproperty-leading: 0;\n}`, `* {\n\tbackground-color: transparent;\n\tpadding-top:3px;\n\t/*font-family:none;*/\n\tfont-size: 21px;\n}`
+#
+# BE CAREFUL NOT TO ALTER THE LENGTH OF THE FOLLOWING REPLACEMENT STRINGS!
+# (Add or remove spaces if necessary to keep the total length the same.)
+#
+# Font size for Glo/Aura
+replace_string = E14BEE, `font-size: 21px;`, `font-size: 21px;`
+#
+# Font size for AuraHD/H2O
+#replace_string = E14BEE, `font-size: 21px;`, `font-size: 26px;`
+#
+# Font family for Glo/Aura/AuraHD/H2O
+#replace_string = E14BD7, `/*font-family:none;*/`, `font-family:  Amasis;`
+replace_string = E14BD7, `/*font-family:none;*/`, `font-family:  Avenir;`
+#replace_string = E14BD7, `/*font-family:none;*/`, `font-family: Georgia;`
+</Patch>
+
+
+#
+# The following two patches are alternatives, don't enable both at once.
+#
+<Patch>
+patch_name = `My 10 line spacing values` 
+patch_enable = `no`
+replace_bytes = 6C3AD4, 8D F5 8A ED, 00 46 00 46
+replace_bytes = 6C3B2A, 8D F5 60 ED, 00 46 00 46
+replace_bytes = 6C3B54, 8D F5 4A ED, 00 46 00 46
+replace_bytes = 6C3B90, 8D F5 2C ED, 00 46 00 46
+replace_bytes = 6C3BF6, 8D F5 FA EC, 00 46 00 46
+#
+# 10 values for replacement
+replace_float = 6C3C88, 1.05, 0.75
+replace_float = 6C3C90, 1.07, 0.8
+replace_float = 6C3C98, 1.1, 0.84
+replace_float = 6C3CA0, 1.35, 0.86
+replace_float = 6C3CA8, 1.7, 0.88
+replace_float = 6C3CB0, 1.8, 0.9
+replace_float = 6C3CB8, 2.2, 0.92
+replace_float = 6C3CC0, 2.4, 0.94
+replace_float = 6C3CC8, 2.6, 0.96
+replace_float = 6C3CD0, 2.8, 1.0
+</Patch>
+
+
+<Patch>
+patch_name = `My 15 line spacing values` 
+patch_enable = `yes`
+# load val1 from new table
+replace_bytes = 6C3ABC, 00 23 00 22 C3 F6 F0 73, 00 46 40 A3 D3 E9 00 23
+# load val5 from new table
+replace_bytes = 6C3B14, 43 F2 33 33 4F F0 33 32, 2C A3 D3 E9 00 23 00 46
+replace_bytes = 6C3B1C, C3 F6 F3 73, 00 46 00 46
+# load val7 from new table
+replace_bytes = 6C3B42, 00 23 00 22 C3 F6 F8 73, 00 46 22 A3 D3 E9 00 23
+# load val10 from new table
+replace_bytes = 6C3B80, 00 22 4F F0 80 43, 15 A3 D3 E9 00 23
+# load val11-val14 from old table in a loop to make room for new table
+replace_bytes = 6C3B94, 48 A3 D3 E9 00 23 07 F1, 48 A7 00 26 D7 E9 00 23
+replace_bytes = 6C3B9C, 80 01 20 46 61 E9 0A 23, 20 A9 31 44 61 E9 0A 23
+replace_bytes = 6C3BA4, 8D F5 22 ED 45 A3 D3 E9, 20 46 8D F5 22 ED 08 36
+replace_bytes = 6C3BAC, 00 23 07 F1 80 01 20 46, 08 37 20 2E F2 D1 00 AF
+# load val15 from new table, jump over new table
+replace_bytes = 6C3BB4, 61 E9 08 23 8D F5 18 ED, 0A A3 D3 E9 00 23 17 E0
+# new table, inial values 1.0, 1.2, 1.5, 2.0, 3.0
+replace_bytes = 6C3BC0, 00 23 07 F1 80 01 20 46, 00 00 00 00 00 00 F0 3F
+replace_bytes = 6C3BC8, 61 E9 06 23 8D F5 0E ED, 33 33 33 33 33 33 F3 3F
+replace_bytes = 6C3BD0, 3F A3 D3 E9 00 23 07 F1, 00 00 00 00 00 00 F8 3F
+replace_bytes = 6C3BD8, 80 01 20 46 61 E9 04 23, 00 00 00 00 00 00 00 40
+replace_bytes = 6C3BE0, 8D F5 04 ED 00 23 00 22, 00 00 00 00 00 00 08 40
+#
+# 15 values for replacement
+replace_float = 6C3BC0, 1.0, 0.7
+replace_float = 6C3C88, 1.05, 0.75
+replace_float = 6C3C90, 1.07, 0.8
+replace_float = 6C3C98, 1.1, 0.82
+replace_float = 6C3BC8, 1.2, 0.84
+replace_float = 6C3CA0, 1.35, 0.86
+replace_float = 6C3BD0, 1.5, 0.88
+replace_float = 6C3CA8, 1.7, 0.9
+replace_float = 6C3CB0, 1.8, 0.92
+replace_float = 6C3BD8, 2.0, 0.94
+replace_float = 6C3CB8, 2.2, 0.96
+replace_float = 6C3CC0, 2.4, 0.98
+replace_float = 6C3CC8, 2.6, 1.0
+replace_float = 6C3CD0, 2.8, 1.05
+replace_float = 6C3BE0, 3.0, 1.1
+</Patch>
+
+
+<Patch>
+patch_name = `Custom fonts sizes`
+patch_enable = `yes`
+# Values for replace
+replace_int = D94248, 12, 20
+replace_int = D9424C, 14, 22
+replace_int = D94250, 16, 24
+replace_int = D94254, 17, 25
+replace_int = D94258, 18, 26
+replace_int = D9425C, 19, 27
+replace_int = D94260, 20, 28
+replace_int = D94264, 21, 29
+replace_int = D94268, 22, 30
+replace_int = D9426C, 24, 31
+replace_int = D94270, 25, 32
+replace_int = D94274, 26, 33
+replace_int = D94278, 28, 34
+replace_int = D9427C, 32, 35
+replace_int = D94280, 36, 36
+replace_int = D94284, 40, 37
+replace_int = D94288, 44, 38
+replace_int = D9428C, 46, 40
+replace_int = D94290, 48, 42
+replace_int = D94294, 50, 44
+replace_int = D94298, 52, 48
+replace_int = D9429C, 54, 52
+replace_int = D942A0, 56, 56
+replace_int = D942A4, 58, 60
+</Patch>
+
+
+<Patch>
+patch_name = `Custom left & right margins`
+patch_enable = `yes`
+# Values for replace
+replace_int = 1081174, 00, 00
+replace_int = 1081178, 02, 01
+replace_int = 108117C, 04, 02
+replace_int = 1081180, 06, 03
+replace_int = 1081184, 08, 04
+replace_int = 1081188, 10, 05
+replace_int = 108118C, 12, 06
+replace_int = 1081190, 14, 07
+replace_int = 1081194, 16, 08
+</Patch>
+
+
+<Patch>
+patch_name = `Brightness fine control`
+patch_enable = `yes`
+replace_int = 975B4A, 10, 01
+replace_int = 975B7A, 10, 01
+</Patch>
+
+
+<Patch>
+patch_name = `Search in Library by default`
+patch_enable = `yes`
+replace_bytes = A32CD8, 00 21, 01 21
+</Patch>
+
+
+<Patch>
+patch_name = `Unitless ePub line height`
+patch_enable = `yes`
+#
+# See http://www.mobileread.com/forums/showpost.php?p=2812097&postcount=31
+# for a description of the problem fixed by this patch.
+#
+replace_bytes = C99B5C, 65 00 6D 00, 20 00 20 00
+</Patch>
+
+
+<Patch>
+patch_name = `Freedom to advanced fonts control`
+patch_enable = `no`
+#
+# This patch allows the advanced font options (weight/sharpness adjustments)
+# to be used with sideloaded fonts too.
+#
+# WARNING: IT IS NOT SAFE TO ENABLE THIS PATCH IF YOUR DEVICE IS SET TO A
+# JAPANESE LOCALE OR JAPANESE BOOKS ARE OPENED.
+#
+# VolumeManager.isJapanese() --> False
+replace_bytes = 6C1184, 81 F5 48 EC, 00 20 00 20
+# N3FontTypeUtil.setupMonotypeDropdown(a,b)
+# --> N3FontTypeUtil.setupDropdown(UNDEFINED,a,b)
+replace_bytes = 83DB32, 58 46 51 46, 59 46 52 46
+replace_bytes = 83DB36, FC F7 BC E5, 13 F4 F8 EC
+# N3FontTypeController.setupAdvancedOption --> NOP
+replace_bytes = 99F552, C6 F6 BC E5, 00 46 00 46
+replace_bytes = 9A15F8, C4 F6 68 E5, 00 46 00 46
+</Patch>
+
+
+<Patch>
+patch_name = `Allow download all in Browser`
+patch_enable = `no`
+replace_bytes = 86E720, F5 F7 44 E3, 01 20 01 20
+</Patch>
+
+#
+# The following two patches are alternatives, don't enable both at once.
+#
+
+<Patch>
+patch_name = `ePub adjustable top/bottom margin`
+patch_enable = `no`
+#
+# If enabled, this patch causes the margin adjustment slider to
+# adjust the top/bottom margins along with the left/right margins in epubs.
+# Note that it has the side-effect of overriding any existing margins set in
+# the book by the @page rule and removing the pre-existing padding-bottom
+# from the built-in stylesheet's body rule.
+#
+# getReadingLineHeight(...) --> getReadingLeftMargin(...)
+replace_bytes = 51EBC0, 4A F7 EC E8, 2C F7 F4 ED
+# QString.arg(double, ...) --> QString.arg(int64, ...)
+replace_bytes = 51EBC4, 20 22 4F F0 FF 33, 20 21 01 22 0A 23
+replace_bytes = 51EBCE, AD F8 04 20 00 93, 02 91 42 43 01 93
+replace_bytes = 51EBD8, 00 22 67 23 37 F7 EA EC, 00 23 00 93 2C F7 94 E9
+#
+# Alternative 1: Adjustable top, zero bottom margin: @page {margin:%1px 0 0 0}
+#replace_string = C99B8C, `\x20\x00p\x00a\x00d\x00d\x00i\x00n\x00g\x00-\x00b\x00o\x00t\x00t\x00o\x00m\x00:\x00\x20\x00%\x001\x00e\x00m\x00\x20\x00!\x00i\x00m\x00p\x00o\x00r\x00t\x00a\x00n\x00t\x00;\x00\n\x00`, `}\x00\n\x00@\x00p\x00a\x00g\x00e\x00\x20\x00{\x00m\x00a\x00r\x00g\x00i\x00n\x00:\x00%\x001\x00p\x00x\x00\x20\x000\x00\x20\x000\x00\x20\x000\x00}\x00\n\x00b\x00o\x00d\x00y\x00\x20\x00{\x00`
+#
+# Alternative 2: Adjustable top and bottom margin: @page {margin:%1px 0}
+replace_string = C99B8C, `\x20\x00p\x00a\x00d\x00d\x00i\x00n\x00g\x00-\x00b\x00o\x00t\x00t\x00o\x00m\x00:\x00\x20\x00%\x001\x00e\x00m\x00\x20\x00!\x00i\x00m\x00p\x00o\x00r\x00t\x00a\x00n\x00t\x00;\x00\n\x00`, `}\x00\n\x00@\x00p\x00a\x00g\x00e\x00\x20\x00{\x00m\x00a\x00r\x00g\x00i\x00n\x00:\x00%\x001\x00p\x00x\x00\x20\x000\x00}\x00\n\x00b\x00o\x00d\x00y\x00\x20\x00{\x00\x20\x00\x20\x00\x20\x00\x20\x00`
+#
+# Set the value of the top/bottom margin to a multiple of readingLeftMargin,
+# in pixels. Suggested values:
+# Normal reading mode: 5px (Touch/Mini), 6px (Glo/Aura), 8px (AuraHD/H2O)
+# Full-screen reading mode: 6px (Touch/Mini), 7px (Glo/Aura), 10px (AuraHD/H2O)
+replace_int = 51EBC6, 1, 6
+#
+</Patch>
+
+
+<Patch>
+patch_name = `ePub fixed top/bottom margin`
+patch_enable = `no`
+#
+# If enabled, this patch sets the top/bottom page margins for ePubs to a fixed
+# value by adding a line @page {margin:10px 0 0 0} or @page {margin:10px 0}
+# to the built-in stylesheet.
+# Note that it has the side-effect of overriding any existing @page margins
+# set in the book's stylesheet and removing the pre-existing padding-bottom
+# from the built-in stylesheet's body rule.
+#
+# Alternative 1: Custom top, zero bottom margin: @page {margin:10px 0 0 0}
+replace_string = C99B8C, `\x20\x00p\x00a\x00d\x00d\x00i\x00n\x00g\x00-\x00b\x00o\x00t\x00t\x00o\x00m\x00:\x00\x20\x00%\x001\x00e\x00m\x00\x20\x00!\x00i\x00m\x00p\x00o\x00r\x00t\x00a\x00n\x00t\x00;\x00\n\x00`, `}\x00\n\x00@\x00p\x00a\x00g\x00e\x00\x20\x00{\x00m\x00a\x00r\x00g\x00i\x00n\x00:\x001\x000\x00p\x00x\x00\x20\x000\x00\x20\x000\x00\x20\x000\x00}\x00\n\x00b\x00o\x00d\x00y\x00\x20\x00{\x00`
+#
+# Alternative 2: Custom top and equal bottom margin: @page {margin:10px 0}
+#replace_string = C99B8C, `\x20\x00p\x00a\x00d\x00d\x00i\x00n\x00g\x00-\x00b\x00o\x00t\x00t\x00o\x00m\x00:\x00\x20\x00%\x001\x00e\x00m\x00\x20\x00!\x00i\x00m\x00p\x00o\x00r\x00t\x00a\x00n\x00t\x00;\x00\n\x00`, `}\x00\n\x00@\x00p\x00a\x00g\x00e\x00\x20\x00{\x00m\x00a\x00r\x00g\x00i\x00n\x00:\x001\x000\x00p\x00x\x00\x20\x000\x00\x20\x00\x20\x00\x20\x00\x20\x00}\x00\n\x00b\x00o\x00d\x00y\x00\x20\x00{\x00`
+#
+# Replacement value: a 2-digit number (margin size in pixels) seperated by \x00
+# E.g. 25 = 2\x005, 30 = 3\x000, etc.
+replace_string = C99BAC, `1\x000`, `2\x005`
+</Patch>
+
+
+<Patch>
+patch_name = `Custom page refresh options`
+patch_enable = `no`
+# cmp r5, #7; bne.n; --> cmp r5, #6; bls.n;
+replace_bytes = 844134, 07 2D 9A D1, 06 2D 9A D9
+#
+# Values for replacement: (Alternative 1, arithmetic sequence e.g. 1,2,3,...,12)
+# Base (use this value for the first menu option):
+replace_int = 844064, 1, 1
+# Increment (add this value to get each successive menu option):
+replace_int = 844132, 1, 1
+# Maxmium (stop adding options when this value is exceeded):
+replace_int = 844134, 6, 12
+#
+# Values for replacement: (Alternative 2, geometric sequence 1,2,4,8,16,32,64)
+# Base (use this value for the first menu option):
+#replace_int = 844064, 1, 1
+# Double to get each successive menu option:
+#replace_bytes = 844132, 01 35, 6D 00
+# Maxmium (stop adding options when this value is exceeded):
+#replace_int = 844134, 6, 64
+</Patch>
+
+
+<Patch>
+patch_name = `Remove system fonts in Reader list`
+patch_enable = `no`
+#
+# Removes Amasis, Avenir, Caecilia, Georgia, Gill Sans, Kobo Nickel, Malabar.
+# BEWARE: Also removes sideloaded Delima, Felbridge, Rockwell, Times New Roman.
+#
+replace_bytes = 9A366C, A1 F6 90 E2, 00 46 00 46
+</Patch>
+
+
+<Patch>
+patch_name = `Remove non-system fonts in Reader list`
+patch_enable = `no`
+#
+# Removes Gothic, Ryumin, OpenDyslexic.
+# BEWARE: Also removes most other sideloaded fonts.
+#
+replace_bytes = 9A369A, A1 F6 7A E2, 00 46 00 46
+</Patch>
+
+
+<Patch>
+patch_name = `Cyrillic keyboard`
+patch_enable = `no`
+# Enable uppercase for sharp-s key
+replace_bytes = 90723C, 00 24, 01 24
+# Replace layout sign
+replace_bytes = D6BF78, C3 89 C3 80 C3 87, D0 B0 D0 B1 D0 B2
+# Change keyboard layout
+replace_bytes = D6BE98, C3 A6, D0 B9
+#
+replace_bytes = D6BE9C, C3 A0, D1 86
+replace_bytes = D6BEA0, C3 A8, D1 83
+replace_bytes = D6BEA4, C3 AC, D0 BA
+replace_bytes = D6BEA8, C3 B2, D0 B5
+replace_bytes = D6BEAC, C3 B9, D0 BD
+replace_bytes = D6BEB0, C3 A1, D0 B3
+replace_bytes = D6BEB4, C3 A9, D1 88
+replace_bytes = D6BEB8, C3 AD, D1 89
+replace_bytes = D6BEBC, C3 B3, D0 B7
+replace_bytes = D6BEC0, C3 BA, D1 85
+replace_bytes = D6BEC4, C3 BD, D1 8A
+#
+replace_bytes = D6BEC8, C5 93, D1 84
+#
+replace_bytes = D6BECC, C3 A2, D1 8B
+replace_bytes = D6BED0, C3 AA, D0 B2
+replace_bytes = D6BED4, C3 AE, D0 B0
+replace_bytes = D6BED8, C3 B4, D0 BF
+replace_bytes = D6BEDC, C3 BB, D1 80
+replace_bytes = D6BEE0, C3 A4, D0 BE
+replace_bytes = D6BEE4, C3 AB, D0 BB
+replace_bytes = D6BEE8, C3 AF, D0 B4
+replace_bytes = D6BEEC, C3 B6, D0 B6
+replace_bytes = D6BEF0, C3 BC, D1 8D
+replace_bytes = D6BEF4, C3 BF, D1 91
+#
+replace_bytes = D6BEF8, C3 A3, D1 8F
+replace_bytes = D6BEFC, C3 B1, D1 87
+replace_bytes = D6BF00, C3 B5, D1 81
+replace_bytes = D6BF04, C3 A5, D0 BC
+#
+replace_bytes = D6BF08, C3 9F, D0 B8
+#
+replace_bytes = D6BF0C, C3 A7, D1 82
+replace_bytes = D6BF10, C4 91, D1 8C
+replace_bytes = D6BF14, C3 B8, D0 B1
+replace_bytes = D6BF18, C4 B3, D1 8E
+#
+replace_bytes = D6BF1C, C5 82, 2E 00
+</Patch>
+
+
+<Patch>
+patch_name = `Force user line spacing in KePubs`
+patch_enable = `no`
+#
+# This patch will allow the line spacing set by the slider to take effect
+# in some problem KePub books with fixed linespacing (ones where the publisher
+# has used <div> instead of <p> for pararaphs.) However it might also override
+# some line spacing that would better be left fixed.
+#
+# body, p { line-height: %1 ... }  -->  body,div,p{line-height:%1 ... }
+replace_string = DB3F5C, `b\x00o\x00d\x00y\x00,\x00 \x00p\x00 \x00{\x00 \x00l\x00i\x00n\x00e\x00-\x00h\x00e\x00i\x00g\x00h\x00t\x00:\x00 \x00%`, `b\x00o\x00d\x00y\x00,\x00d\x00i\x00v\x00,\x00p\x00{\x00l\x00i\x00n\x00e\x00-\x00h\x00e\x00i\x00g\x00h\x00t\x00:\x00%`
+</Patch>
+
+
+<Patch>
+patch_name = `Customise PinchGestureRecognizer`
+patch_enable = `no`
+# PinchGestureRecognizer::StationaryTolerance
+replace_float = CFDBF0, 5.0, 5.0
+# PinchGestureRecognizer::UpdateTolerance
+replace_float = CFDBF8, 10.0, 10.0
+# PinchGestureRecognizer::TriggerTolerance
+replace_float = CFDC00, 30.0, 30.0
+</Patch>
+
+
+<Patch>
+patch_name = `Wi-Fi insomnia`
+patch_enable = `no`
+#
+# Do not enable this patch unless you're sure you need it.
+# It prevents the wifi turning off, which may drain the device's battery.
+#
+replace_bytes = 624F5C, 29 B9, 00 46
+</Patch>
+
+
+<Patch>
+patch_name = `Margins fine tuning`
+patch_enable = `no`
+#
+# Do not enable this patch unless you're sure you need it.
+# It may cause the screen to be off-centre.
+#
+# Initial replaces
+replace_bytes = 9FC5FC, 19 46, 00 21
+replace_bytes = 9FC600, 1A 46, 00 22
+# Values for replace
+# Left margin
+replace_int = 9FC5FC, 0, 10
+# Top margin
+replace_int = 9FC600, 0, 10
+</Patch>
+
+
+<Patch>
+patch_name = `Custom kepub default margins`
+patch_enable = `no`
+# Device = Glo/Aura, Type = pocket article or non-Japanese kepub
+replace_int = 6601B6, 25, 5
+# Device = Glo/Aura, Type = Japanese kepub
+replace_int = 6601B8, 45, 5
+# Device = Other, Type = Any
+replace_int = 6601C6, 20, 5
+</Patch>
+
+
+<Patch>
+patch_name = `Block WiFi firmware upgrade`
+patch_enable = `no`
+#
+# This patch is untested. If it works then the firmware will not be upgraded
+# during a WiFi sync, but you can still upgrade manually or by syncing with
+# the Kobo desktop.
+#
+replace_string = CF086A, `%\x003\x00/\x00%\x004\x00/\x00%\x005\x00`, `k\x00/\x009\x009\x00.\x009\x00/\x005\x00`
+</Patch>
