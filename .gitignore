@@ -1,2 +1,4 @@
-KoboRoot.tgz
 patch32lsb
+*.tgz
+*.zip
+usr/local/Kobo/*
