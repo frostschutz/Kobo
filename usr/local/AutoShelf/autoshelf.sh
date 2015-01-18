@@ -9,10 +9,16 @@ udev_workarounds() {
         SETSID=1 setsid "$0" "$@" &
         exit
     fi
+}
 
-    # udev calls twice. mkdir lock
-    mkdir /tmp/autoshelf-lock || exit
-    sleep 30 && rmdir /tmp/autoshelf-lock &
+suspend_nickel() {
+    mkdir /tmp/suspend-nickel && pkill -SIGSTOP nickel
+    mkdir /tmp/suspend-nickel/"$1" || exit
+}
+
+resume_nickel() {
+    rmdir /tmp/suspend-nickel/"$1"
+    rmdir /tmp/suspend-nickel && pkill -SIGCONT nickel
 }
 
 filesystem() {
@@ -20,6 +26,10 @@ filesystem() {
 }
 
 autoshelf() {
+    echo "PRAGMA synchronous = OFF;"
+    echo "PRAGMA journal_mode = MEMORY;"
+    echo "BEGIN TRANSACTION;"
+
     echo "DELETE FROM Shelf WHERE InternalName LIKE '%/';"
     echo "DELETE FROM ShelfContent WHERE ShelfName LIKE '%/';"
 
@@ -61,18 +71,22 @@ autoshelf() {
         WHERE ContentID='$file'
         ;"
     done
+
+    echo "END TRANSACTION;"
 }
 
 udev_workarounds
 
+suspend_nickel autoshelf
+
 for i in $(seq 1 10)
 do
-    sleep 2
-
     if [ -e /mnt/onboard/.kobo/KoboReader.sqlite ]
     then
         break
     fi
+
+    sleep 1
 done
 
 if [ -e /mnt/onboard/.kobo/KoboReader.sqlite ]
@@ -89,4 +103,4 @@ then
     fi
 fi
 
-wait
+resume_nickel autoshelf
