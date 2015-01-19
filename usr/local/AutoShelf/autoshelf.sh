@@ -12,13 +12,22 @@ udev_workarounds() {
 }
 
 suspend_nickel() {
-    mkdir /tmp/suspend-nickel && pkill -SIGSTOP nickel
+    mkdir /tmp/suspend-nickel && (
+        pkill -SIGSTOP nickel
+        cat /sys/class/graphics/fb0/rotate > /tmp/rotate-nickel
+        nice /etc/init.d/on-animator.sh &
+    )
     mkdir /tmp/suspend-nickel/"$1" || exit
 }
 
 resume_nickel() {
     rmdir /tmp/suspend-nickel/"$1"
-    rmdir /tmp/suspend-nickel && pkill -SIGCONT nickel
+    rmdir /tmp/suspend-nickel && (
+        killall on-animator.sh pickle
+        cat /tmp/rotate-nickel > /sys/class/graphics/fb0/rotate
+        cat /sys/class/graphics/fb0/rotate > /sys/class/graphics/fb0/rotate # 180° fix
+        pkill -SIGCONT nickel
+    )
 }
 
 filesystem() {
