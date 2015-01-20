@@ -39,7 +39,7 @@ md5() {
 
 udev_workarounds
 
-suspend_nickel
+suspend_nickel autopatch
 
 for i in $(seq 1 10)
 do
@@ -142,7 +142,7 @@ fi
 if [ "$reboot" == "1" ]
 then
     #reboot
-    resume_nickel
+    resume_nickel autopatch
 else
-    resume_nickel
+    resume_nickel autopatch
 fi
