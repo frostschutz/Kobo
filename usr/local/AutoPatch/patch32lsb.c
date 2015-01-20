@@ -1,6 +1,6 @@
 /* patch32lsb.c -- Apply 'Patcher' style patches to a LSB executable.
 
-   Version 0.7, created 15 May 2014 by Geoffrey Reynolds.
+   Version 0.10, created 5 Jan 2015 by Geoffrey Reynolds.
    This file is hereby placed into the public domain.
 
    Changes:
@@ -12,10 +12,20 @@
    0.5 -> 0.6  Accept \x in replace_string, e.g. \x00 encodes a null byte.
    0.6 -> 0.7  Ignore redundant utf-8 byte order mark inserted at the beginning
                of the patch file by some editors (e.g. Notepad, Wordpad).
+   0.7 -> 0.8  Added base_address keyword.
+               Recognise '\0' as a synonym for '\x00'.
+   0.8 -> 0.9  Added find_base_address and find_xor8_mask functions.
+   0.9 -> 0.10 Truncate addresses to 32 bits, to allow for negative offsets.
+               Avoid using memmem() since mingw doesn't have it.
+               Much faster one-pass implementation of find_xor8_mask.
+               Include version number in --help.
+
 
    Limitations:
    replace_utf8chars, replace_zlib not implemented.
    Input file must be seekable.
+   --revert option fails if patches modify the same data more than once.
+   --revert option fails if find_base_address or find_xor8_mask are used.
 
 
    For patches of the following form:
@@ -47,6 +57,8 @@
 #include <string.h>
 #include <getopt.h>
 
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 10
 
 /* Default patch file to use if not specified with -p on the command line.
  */
@@ -73,6 +85,7 @@ static const struct option long_opts[] =
 
 static void help(void)
 {
+  printf("patch32lsb version %d.%d\n", VERSION_MAJOR, VERSION_MINOR);
   printf("Usage: %s [-r] [-p PATCH_FILE] -i INPUT_FILE [-o OUTPUT_FILE]\n",
 	 program_name);
   printf("Apply/revert patches in PATCH_FILE against INPUT_FILE"
@@ -83,7 +96,7 @@ static void help(void)
   printf("-p --patch-file FILE   Read patches from FILE (default '%s')\n",
 	 DEFAULT_PATCH_FILENAME);
   printf("-k --kpg               Leave xor strings unterminated like kpg.exe\n");
-  printf("-r --revert            Revert patch\n");
+  printf("-r --revert            Revert patch (some patches can't be reverted)\n");
   printf("-h --help              Display this helpful message\n");
 
   exit(EXIT_SUCCESS);
@@ -152,7 +165,7 @@ static int parse_byte_list(const char *str, unsigned char *bytes)
 
 static int unescape_line(char *line, char delim, char **tail)
 {
-  /* Replace \\, \n, \r, \t, \v \", \', \` with their unescaped byte values.
+  /* Replace \\, \n, \r, \t, \v \", \', \`, \0 with their unescaped byte values.
      Replace \xHH with the byte HH, where H is a hexdecimal digit.
      Stop processing at first unescaped occurance of delim (if any).
      Set tail to point to the first unprocessed character.
@@ -180,6 +193,8 @@ static int unescape_line(char *line, char delim, char **tail)
 	*q = '\t'; break;
       case 'v':
 	*q = '\v'; break;
+      case '0':
+	*q = '\0'; break;
       case 'x':
 	if (!isxdigit(p[1]) || !isxdigit(p[2]))
 	  return -1;
@@ -230,6 +245,77 @@ void *memcpy_xor8(void *e, const void *u, size_t len, unsigned char x)
     p[i] = q[i]^x;
 
   return p;
+}
+
+static long find_unique_xor8(const void *haystack, size_t hlen,
+			     const void *needle, size_t nlen, unsigned char x)
+{
+  /* Returns the position of the unique needle^x in haystack,
+     or -1 if needle^x not found,
+     or -2 if needle^x not unique. */
+
+  const unsigned char *p, *q;
+  const void *r;
+  unsigned char n0;
+
+  if (hlen == 0 || hlen < nlen)
+    return -1;
+  if (nlen == 0)
+    return -2;
+
+  n0 = *(const unsigned char *)needle;
+  p = (const unsigned char *)haystack;
+  q = p + hlen - nlen;
+
+  while (p <= q && (*p != (n0^x) || memcmp_xor8(p,needle,nlen,x) != 0))
+    p++;
+  if (p > q)
+    return -1;
+
+  r = p++;
+  while (p <= q && (*p != (n0^x) || memcmp_xor8(p,needle,nlen,x) != 0))
+    p++;
+  if (p <= q)
+    return -2;
+
+  return r - haystack;
+}
+
+static int find_xor8_mask(const void *haystack, size_t hlen,
+			  const void *needle, size_t nlen)
+{
+  /* Returns the xor8 mask of the unique needle in haystack,
+     or -1 if needle not found,
+     or -2 if needle not unique. */
+
+  const unsigned char *p, *q;
+  int r;
+  unsigned char n0, n1, x;
+
+  if (hlen == 0 || hlen < nlen)
+    return -1;
+  if (nlen == 0)
+    return -2;
+
+  n0 = *(const unsigned char *)needle;
+  p = (const unsigned char *)haystack;
+
+  if (nlen == 1)
+    return (hlen == 1)? *p^n0 : -2;
+
+  n1 = *((const unsigned char *)needle+1);
+
+  for (r = -1, q = p + hlen - nlen; p <= q; p++) {
+    x = *p^n0;
+    if (*(p+1) == (n1^x) && memcmp_xor8(p,needle,nlen,x) == 0) {
+      if (r == -1)
+	r = x;
+      else
+	return -2;
+    }
+  }
+
+  return r;
 }
 
 /* Rearrange a double into little-endian byte order.
@@ -335,6 +421,7 @@ int main(int argc, char **argv)
   char patch_name[80];
   int in_patch = 0, patch_enabled = 0, patch_started = 0;
   unsigned char xor8 = 0;
+  unsigned long base_addr = 0;
 
   while ((buf = read_line(patch_file)) != NULL) {
     unsigned long addr;
@@ -342,7 +429,7 @@ int main(int argc, char **argv)
       if (in_patch++)
 	line_error("missing </Patch>");
       patch_name[0] = '\0', patch_enabled = 0, patch_started = 0;
-      xor8 = 0;
+      xor8 = 0, base_addr = 0;
     }
     else if (strncasecmp(buf,"</Patch>",strlen("</Patch>")) == 0) {
       if (--in_patch)
@@ -391,6 +478,62 @@ int main(int argc, char **argv)
 	xor8 = x;
       }
     }
+    else if (strncasecmp(buf,"base_address",strlen("base_address")) == 0) {
+      if (!in_patch)
+	line_error("misplaced base_address");
+      else if (patch_enabled) {
+	if (sscanf(buf, "%*[^=]=%lx", &base_addr) != 1)
+	  line_error("malformed base_address");
+      }
+    }
+    else if (strncasecmp(buf,"find_base_address",strlen("find_base_address")) == 0) {
+      char delim, *s, *t;
+      int slen;
+      long ret;
+      if (!in_patch)
+	line_error("misplaced find_base_address");
+      else if (patch_enabled) {
+	if (sscanf(buf, "%*[^=]=%*[^`\'\"]%c", &delim) != 1)
+	  line_error("malformed find_base_address");
+	if ((s = strchr(buf,delim)) == NULL)
+	  line_error("malformed find_base_address string");
+	s++;
+	if ((slen = unescape_line(s,delim,&t)) < 0)
+	  line_error("malformed find_base_address string");
+	else if (slen == 0)
+	  line_error("zero length find_base_address string");
+	switch ((ret = find_unique_xor8(data,data_len,s,slen,xor8))) {
+	  case -1: line_error("find_base_address string not found");
+	  case -2: line_error("find_base_address string not unique");
+	  default: base_addr = ret;
+	}
+        fprintf(stderr,"find_base_address: unique string at %.8lX\n",base_addr);
+      }
+    }
+    else if (strncasecmp(buf,"find_xor8_mask",strlen("find_xor8_mask")) == 0) {
+      char delim, *s, *t;
+      int slen;
+      int ret;
+      if (!in_patch)
+	line_error("misplaced find_xor8_mask");
+      else if (patch_enabled) {
+	if (sscanf(buf, "%*[^=]=%*[^`\'\"]%c", &delim) != 1)
+	  line_error("malformed find_xor8_mask");
+	if ((s = strchr(buf,delim)) == NULL)
+	  line_error("malformed find_xor_mask string");
+	s++;
+	if ((slen = unescape_line(s,delim,&t)) < 0)
+	  line_error("malformed find_xor8_mask string");
+	else if (slen == 0)
+	  line_error("zero length find_xor8_mask string");
+	switch ((ret = find_xor8_mask(data,data_len,s,slen))) {
+	  case -1: line_error("find_xor_mask string not found");
+	  case -2: line_error("find_xor_mask string not unique");
+	  default: xor8 = ret;
+	}
+	fprintf(stderr,"find_xor8_mask: unique string with mask %.2X\n",xor8);
+      }
+    }
     else if (strncasecmp(buf,"replace_bytes",strlen("replace_bytes")) == 0) {
       char b[2][96];
       unsigned char B[2][32];
@@ -405,6 +548,7 @@ int main(int argc, char **argv)
 	  line_error("malformed replace_bytes argument");
 	if (len != parse_byte_list(b[1],B[1]))
 	  line_error("malformed replace_bytes argument");
+	addr = (addr + base_addr) & 0xFFFFFFFF;
 	if (addr + len > data_len)
 	  line_error("replace_bytes address beyond end of input file");
 	else if (memcmp_xor8(data+addr,B[revert],len,xor8))
@@ -420,7 +564,8 @@ int main(int argc, char **argv)
       else if (patch_enabled) {
 	if (sscanf(buf, "%*[^=]=%lx,%lf,%lf", &addr, &D[0], &D[1]) != 3)
 	  line_error("malformed replace_float");
-	else if (addr + sizeof(double) > data_len)
+	addr = (addr + base_addr) & 0xFFFFFFFF;
+	if (addr + sizeof(double) > data_len)
 	  line_error("replace_float address beyond end of input file");
 	set_htole_double(&D[0]);
 	set_htole_double(&D[1]);
@@ -438,9 +583,10 @@ int main(int argc, char **argv)
       else if (patch_enabled) {
 	if (sscanf(buf, "%*[^=]=%lx,%d,%d", &addr, &I[0], &I[1]) != 3)
 	  line_error("malformed replace_int");
-	else if (I[0] < 0 || I[0] > 255 || I[1] < 0 || I[1] > 255)
+	addr = (addr + base_addr) & 0xFFFFFFFF;
+	if (I[0] < 0 || I[0] > 255 || I[1] < 0 || I[1] > 255)
 	  line_error("replace_int value out of range 0-255");
-	else if (addr + sizeof(unsigned char) > data_len)
+	if (addr + sizeof(unsigned char) > data_len)
 	  line_error("replace_int address beyond end of input file");
 	U[0] = I[0];
 	U[1] = I[1];
@@ -458,7 +604,8 @@ int main(int argc, char **argv)
       else if (patch_enabled) {
 	if (sscanf(buf, "%*[^=]=%lx%*[^`\'\"]%c", &addr, &delim) != 2)
 	  line_error("malformed replace_string address");
-	else if ((S[0] = strchr(buf,delim)) == NULL)
+	addr = (addr + base_addr) & 0xFFFFFFFF;
+	if ((S[0] = strchr(buf,delim)) == NULL)
 	  line_error("malformed replace_string (original string)");
 	S[0]++;
 	if ((L[0] = unescape_line(S[0],delim,&s)) < 0)

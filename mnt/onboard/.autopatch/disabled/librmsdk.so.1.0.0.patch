@@ -1,4 +1,5 @@
 # librmsdk.so.1.0.0 in firmware 3.12.0 (563a2baefd)
+# For use by patch32lsb v0.10 or later.
 
 <Patch>
 patch_name = `Fix page breaks bug`
@@ -19,13 +20,18 @@ replace_bytes = 2C06C0, E6 D0, E6 E7
 <Patch>
 patch_name = `Ignore book internal CSS stylesheet`
 patch_enable = `no`
-replace_string = 70BA90, `s`, `_`
-replace_string = 70BAA8, `s`, `_`
+# Multi-version patch: 3.3.0 - 3.12.0+
+find_base_address = `\0stylesheet\0`
+replace_string = 0001, `s`, `_`
+find_base_address = `\0style-sheet\0`
+replace_string = 0001, `s`, `_`
 </Patch>
 
 
 <Patch>
 patch_name = `Ignore book TOC navpoints`
 patch_enable = `no`
-replace_string = 70DFC0, `n`, `_`
+# Multi-version patch: 3.3.0 - 3.12.0+
+find_base_address = `\0navPoint\0`
+replace_string = 0001, `n`, `_`
 </Patch>
