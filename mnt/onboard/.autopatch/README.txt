@@ -1,4 +1,4 @@
-AutoPatch - beta 1
+AutoPatch - beta 2
 ------------------
 
 This mod allows the Kobo to patch itself, using patch files stored 
