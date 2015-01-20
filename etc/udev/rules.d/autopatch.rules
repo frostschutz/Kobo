@@ -1,2 +1,1 @@
-# udev runs the startup script for us
-KERNEL=="loop0", RUN+="/usr/local/AutoPatch/autopatch"
+KERNEL=="fsl-usb2-udc", ACTION=="remove", RUN+="/usr/local/AutoPatch/autopatch.sh"

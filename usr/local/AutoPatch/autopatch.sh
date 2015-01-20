@@ -1,27 +1,57 @@
 #!/bin/sh
 
-set -x
-
-#
-# AutoPatch 0.1 beta
-#
-
 AUTOPATCH="/usr/local/AutoPatch"
 TMPFS="$AUTOPATCH/tmpfs"
 PATH="$PATH:$AUTOPATCH"
 FILES_TO_PATCH="/usr/local/Kobo/libnickel.so.1.0.0 /usr/local/Kobo/libadobe.so /usr/local/Kobo/librmsdk.so.1.0.0"
 
+udev_workarounds() {
+    # udev kills slow scripts
+    if [ "$SETSID" != "1" ]
+    then
+        SETSID=1 setsid "$0" "$@" &
+        exit
+    fi
+}
+
+suspend_nickel() {
+    mkdir /tmp/suspend-nickel && (
+        pkill -SIGSTOP nickel
+        cat /sys/class/graphics/fb0/rotate > /tmp/rotate-nickel
+        nice /etc/init.d/on-animator.sh &
+    )
+    mkdir /tmp/suspend-nickel/"$1" || exit
+}
+
+resume_nickel() {
+    rmdir /tmp/suspend-nickel/"$1"
+    rmdir /tmp/suspend-nickel && (
+        killall on-animator.sh pickle
+        cat /tmp/rotate-nickel > /sys/class/graphics/fb0/rotate
+        cat /sys/class/graphics/fb0/rotate > /sys/class/graphics/fb0/rotate # 180° fix
+        pkill -SIGCONT nickel
+    )
+}
+
 md5() {
     cat "$@" | md5sum | sed -e 's/ .*//'
 }
 
-cd "$AUTOPATCH" || exit
+udev_workarounds
 
-# wait for things to settle down
-pidof nickel || sleep 60
-pidof nickel || sleep 60
-pidof nickel || exit
-sleep 60
+suspend_nickel
+
+for i in $(seq 1 10)
+do
+    if [ -e /mnt/onboard/.kobo/KoboReader.sqlite ]
+    then
+        break
+    fi
+
+    sleep 1
+done
+
+cd "$AUTOPATCH"
 
 mkdir -p "$TMPFS" /mnt/onboard/.autopatch/failed /mnt/onboard/.autopatch/disabled
 mount -t tmpfs none "$TMPFS"
@@ -111,5 +141,8 @@ fi
 
 if [ "$reboot" == "1" ]
 then
-    reboot
+    #reboot
+    resume_nickel
+else
+    resume_nickel
 fi
