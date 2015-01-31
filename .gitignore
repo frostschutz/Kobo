@@ -1,6 +1,9 @@
 pngcat
 stdbuf
 libstdbuf.so
+lodepng.c
+lodepng.h
+a.out
 *.tgz
 *.zip
 *.png
