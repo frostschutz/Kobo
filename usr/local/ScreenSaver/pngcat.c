@@ -25,8 +25,9 @@ int main(int argc, char *argv[])
             for(y=1080; y--;)
             {
                 // I hate RGB565
-                fb[2*(y*1440+x)+1] = (image[3*(x*1080+y)+0]>>3)<<3 | (image[3*(x*1080+y)+1]>>5);
-                fb[2*(y*1440+x)+0] = (image[3*(x*1080+y)+1]>>2)<<5 | (image[3*(x*1080+y)+2]>>3);
+                fb[2*((1079-y)*1440+x)+1] = (image[3*(x*1080+y)+0]>>3)<<3 | (image[3*(x*1080+y)+1]>>5);
+                fb[2*((1079-y)*1440+x)+0] = (image[3*(x*1080+y)+1]>>2)<<5 | (image[3*(x*1080+y)+2]>>3);
+                // mathematically challenged >_<
             }
         }
     }
