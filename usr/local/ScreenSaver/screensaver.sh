@@ -26,8 +26,8 @@ do
 
     # show random picture
     set -- *.png
-    rnd=$(($RANDOM+$RANDOM+$RANDOM))
-    file=$(eval 'echo "$'$((1 + $rnd % $#))'"')
+    rnd="$RANDOM$RANDOM$RANDOM"
+    file=$(eval 'echo "${'$((1 + $rnd % $#))'}"')
     pngcat "$file" | /usr/local/Kobo/pickel showpic
     pngcat "$file" | /usr/local/Kobo/pickel showpic 1
 
