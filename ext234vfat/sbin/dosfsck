@@ -1,0 +1,23 @@
+#!/bin/busybox sh
+
+#
+# Execute dosfsck, but allow for alternative filesystems.
+#
+
+/bin/dosfsck "$@" && exit 0
+error=$?
+
+# This would be an error, but if it mounts, let it go by.
+
+for dev; do true; done
+
+if [ "${dev:0:5}" == "/dev/" ]
+then
+    mkdir /tmp/dosfsck 
+    mount -t auto -o noatime $dev /tmp/dosfsck
+    error=$? # not an error if it mounted
+    umount /tmp/dosfsck
+    rmdir /tmp/dosfsck
+fi
+
+exit $error

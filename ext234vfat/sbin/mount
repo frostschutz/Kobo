@@ -1,0 +1,20 @@
+#!/bin/busybox sh 
+
+#
+# Allow vfat to be mounted as ext* instead.
+#
+
+original=$(echo "$@")
+filtered=$(echo "$@" | sed -e 's/-t  *vfat//')
+
+if [ "$original" != "$filtered" ]
+then
+    # vfat first
+    /bin/mount "$@" && exit 0
+    # otherwise ext*/auto
+    filtered=$(echo "$filtered" | sed -e 's/-o  *[^ ]*//')
+    exec /bin/mount -t auto -o noatime,nodiratime $filtered
+fi
+
+# Everything else:
+exec /bin/mount "$@"
