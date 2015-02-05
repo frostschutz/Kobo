@@ -2,7 +2,7 @@
 
 AUTOPATCH="/usr/local/AutoPatch"
 TMPFS="$AUTOPATCH/tmpfs"
-PATH="$PATH:$AUTOPATCH"
+PATH="$AUTOPATCH":"$PATH"
 FILES_TO_PATCH="/usr/local/Kobo/libnickel.so.1.0.0 /usr/local/Kobo/libadobe.so /usr/local/Kobo/librmsdk.so.1.0.0"
 
 udev_workarounds() {
