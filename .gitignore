@@ -1,0 +1,12 @@
+*.png
+*.tgz
+*.zip
+a.out
+libstdbuf.so
+lodepng.c
+lodepng.h
+patch32lsb
+pngcat
+sqlite3
+stdbuf
+usr/local/Kobo/*
