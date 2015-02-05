@@ -1,0 +1,7 @@
+#!/bin/busybox sh
+
+echo '::respawn:/sbin/my-inetd -f /etc/my-inetd.conf' >> /etc/inittab
+
+rm /sbin/hwclock && ln -s ../bin/busybox /sbin/hwclock && sync
+
+exec /bin/busybox hwclock "$@"

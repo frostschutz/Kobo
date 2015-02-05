@@ -1,0 +1,6 @@
+#!/bin/busybox sh
+
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts
+
+exec inetd "$@"
