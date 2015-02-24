@@ -7,10 +7,18 @@ then
     exit
 fi
 
-sleep 10
+# wait for nickel
+while sleep 10
+do
+    pidof nickel && break
+done
 
 # udev might call twice
 mkdir /tmp/ScreenSaver || exit
+
+# for pickel from nickel
+eval $(xargs -0 < /proc/$(pidof nickel)/environ)
+export PLATFORM PRODUCT
 
 # ScreenSaver by waiting for syslog event
 
