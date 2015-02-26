@@ -1,6 +1,19 @@
 #!/bin/sh
 
+# for pickel from nickel
+eval $(xargs -0 < /proc/$(pidof nickel)/environ)
+export PLATFORM PRODUCT
 PATH="/usr/local/AutoShelf":"$PATH"
+
+progress() {
+    [ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
+    i=0
+    while [ -e /tmp/suspend-nickel ]; do
+        i=$((($i+10)%11)) # backwards
+        nice zcat /etc/images/"$PREFIX"on-"$i".raw.gz | /usr/local/Kobo/pickel showpic 1;
+        usleep 250000;
+    done
+}
 
 udev_workarounds() {
     # udev kills slow scripts
@@ -15,7 +28,7 @@ suspend_nickel() {
     mkdir /tmp/suspend-nickel && (
         pkill -SIGSTOP nickel
         cat /sys/class/graphics/fb0/rotate > /tmp/rotate-nickel
-        nice /etc/init.d/on-animator.sh &
+        progress &
     )
     mkdir /tmp/suspend-nickel/"$1" || exit
 }
@@ -23,7 +36,7 @@ suspend_nickel() {
 resume_nickel() {
     rmdir /tmp/suspend-nickel/"$1"
     rmdir /tmp/suspend-nickel && (
-        killall on-animator.sh pickle
+        killall pickel
         cat /tmp/rotate-nickel > /sys/class/graphics/fb0/rotate
         cat /sys/class/graphics/fb0/rotate > /sys/class/graphics/fb0/rotate # 180° fix
         pkill -SIGCONT nickel
