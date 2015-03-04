@@ -29,6 +29,14 @@ logread -f | stdbuf -oL grep '>>> IconPowerView' | while read line
 do
     cd /mnt/onboard/.ScreenSaver || exit
 
+    if [ -e uninstall ]
+    then
+        mv uninstall uninstalled-$(date +%Y%M%d-%H%M)
+        rm -f /etc/udev/rules.d/screensaver.rules
+        rm -rf /usr/local/ScreenSaver
+        exit
+    fi
+
     # save rotation
     rotate=$(cat "$ROTATE")
 
