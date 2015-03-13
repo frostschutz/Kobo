@@ -7,7 +7,7 @@ PATH="/usr/local/AutoShelf":"$PATH"
 
 progress() {
     [ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
-    i=0
+    local i=0
     while [ -e /tmp/suspend-nickel ]; do
         i=$((($i+10)%11)) # backwards
         nice zcat /etc/images/"$PREFIX"on-"$i".raw.gz | /usr/local/Kobo/pickel showpic 1;
@@ -51,7 +51,7 @@ autoshelf() {
     echo "DELETE FROM Shelf WHERE InternalName LIKE '%/';"
     echo "DELETE FROM ShelfContent WHERE ShelfName LIKE '%/';"
 
-    i=0
+    local i=0
 
     sqlite3 /mnt/onboard/.kobo/KoboReader.sqlite "
     SELECT ContentID FROM content
