@@ -43,10 +43,6 @@ resume_nickel() {
     )
 }
 
-filesystem() {
-    find /mnt/ -not -path '*/\.*' | sort
-}
-
 autoshelf() {
     echo "PRAGMA synchronous = OFF;"
     echo "PRAGMA journal_mode = MEMORY;"
@@ -59,10 +55,8 @@ autoshelf() {
 
     sqlite3 /mnt/onboard/.kobo/KoboReader.sqlite "
     SELECT ContentID FROM content
-    WHERE ContentID LIKE 'file:///mnt/%'
-      AND ContentID NOT LIKE '%#%'
-      AND ContentID NOT LIKE '%/.%'
-      AND ContentType != 9
+    WHERE ContentType = 6
+      AND ContentID LIKE 'file:///mnt/%'
     ORDER BY ContentID
     ;" | while read file
     do
@@ -72,6 +66,7 @@ autoshelf() {
         shelf=$(dirname "$file" | sed -r -e 's@^file://*mnt//*(onboard|sd)/*@@')
         word=$(basename "$file")
         for number in $word; do break; done
+
         if [ "$shelf" == "" ]
         then
             series="$word"
@@ -89,7 +84,7 @@ autoshelf() {
 
         echo "
         UPDATE content
-        SET Series='$series', SeriesNumber='$number', DateCreated=$date, DateAdded=$date
+        SET Series='$series', SeriesNumber='$number'
         WHERE ContentID='$file'
         ;"
     done
