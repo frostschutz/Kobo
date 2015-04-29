@@ -25,8 +25,25 @@ export PLATFORM PRODUCT
 PATH="/usr/local/ScreenSaver:$PATH"
 ROTATE=/sys/class/graphics/fb0/rotate
 
-logread -f | stdbuf -oL grep '>>> IconPowerView' | while read line
+# 3.15.0 workaround: IconPowerView message no longer appears, instead we get this:
+# nickel: QWidget(0x5d84d8, name = "infoContainer")  does not have a property named  "spacing"
+
+oldtimestamp=$(date +%s)
+
+logread -f | stdbuf -oL grep -E '>>> IconPowerView|nickel: QWidget.*"infoContainer".*"spacing"' | while read line
 do
+    # QWidget message is noisy.
+    timestamp=$(date +%s)
+
+    if [ $(($timestamp-$oldtimestamp)) -lt 10 ]
+    then
+        continue
+    fi
+
+    oldtimestamp=$timestamp
+
+    # End of 3.15.0 workaround
+
     cd /mnt/onboard/.ScreenSaver || exit
 
     if [ -e uninstall ]
