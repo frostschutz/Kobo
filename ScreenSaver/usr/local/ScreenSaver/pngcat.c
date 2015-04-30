@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
         size=3145728;
     }
 
-    else if(!strcmp(product, "trilogy") || !strcmp(product, "pixie"))
+    else if(!strcmp(product, "trilogy") || !strcmp(product, "pixie") || !strcmp(product, "pica"))
     {
         xres=600;
         yres=800;
