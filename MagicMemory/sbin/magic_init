@@ -1,0 +1,90 @@
+#!/bin/sh
+
+# call stack: magic_init -> tmpfs_init -> real_init -> magic_udev
+
+# restore original init first
+rm /sbin/init
+ln -s ../bin/busybox /sbin/init
+sync
+
+mkdir /new /old /put
+
+# copy root to tmpfs
+mount -t tmpfs -o size=512M none /new
+mount -o bind / /old
+cp -a /old/. /new/.
+
+# switch rootfs to tmpfs
+cd /new
+pivot_root . put
+cd /
+
+# --- tmpfs udev rule: ---
+mkdir -p /etc/udev/rules.d
+cat > /etc/udev/rules.d/magicmemory.rules << 'EOF'
+KERNEL=="loop0", RUN+="/tmpfs_magic_udev"
+EOF
+# --- End of tmpfs udev rule. ---
+
+# --- tmpfs_magic_udev: ---
+cat > /tmpfs_magic_udev << 'EOF'
+#!/bin/sh
+
+# udev kills slow scripts
+if [ "$SETSID" != "1" ]
+then
+    SETSID=1 setsid "$0" "$@" &
+    exit
+fi
+
+# wait for nickel
+while sleep 10
+do
+    pidof nickel && break
+done
+
+# udev might call twice
+mkdir /tmp/MagicMemory || exit
+
+# steal nickel's environment
+eval $(xargs -0 < /proc/$(pidof nickel)/environ)
+export $(xargs -0 < /proc/$(pidof nickel)/environ | sed -e 's@=[^ ]*@@g')
+cd / # PWD sanity
+
+# kill and resurrect nickel in tmpfs
+killall nickel
+sleep 10
+umount /mnt/onboard
+# FIXME:
+echo 1 > /sys/module/mmc_core/parameters/removable
+/usr/local/Kobo/nickel -platform kobo -skipFontLoad &
+
+echo MUAHAHAHA > /I_AM_FREE
+
+sleep 10000
+
+EOF
+# --- End of tmpfs_magic_udev. ---
+chmod +x /tmpfs_magic_udev
+
+# --- tmpfs_magic_init: ---
+cat > /tmpfs_magic_init << 'EOF'
+#!/bin/sh
+
+# uninstall
+rm /sbin/magic_init
+
+# umount mmc root
+umount /put/new /put/old /put/put
+rmdir /put/new /put/old /put/put
+umount /new /old /put
+rmdir /new /old /put
+
+# continue with original init in tmpfs
+exec /sbin/init "$@"
+EOF
+# --- End of tmpfs_magic_init. ---
+chmod +x /tmpfs_magic_init
+
+# run /tmpfs_magic_init
+exec /tmpfs_magic_init
