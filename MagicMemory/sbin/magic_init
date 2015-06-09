@@ -30,39 +30,159 @@ EOF
 cat > /tmpfs_magic_udev << 'EOF'
 #!/bin/sh
 
-# udev kills slow scripts
-if [ "$SETSID" != "1" ]
-then
-    SETSID=1 setsid "$0" "$@" &
-    exit
-fi
+udev_quirks() {
+    # udev kills slow scripts
+    if [ "$SETSID" != "1" ]
+    then
+        SETSID=1 setsid "$0" "$@" &
+        exit
+    fi
 
-# wait for nickel
-while sleep 10
+    # udev might call twice
+    mkdir /tmp/MagicMemory || exit
+}
+
+nickel_wait() {
+    while sleep 1
+    do
+        pidof nickel && sleep 5 && break
+    done
+}
+
+nickel_grab_env() {
+    eval $(xargs -0 < /proc/$(pidof nickel)/environ)
+    export $(xargs -0 < /proc/$(pidof nickel)/environ | sed -e 's@=[^ ]*@@g')
+    cd / # PWD sanity
+}
+
+nickel_kill() {
+    killall nickel
+    while sleep 1
+    do
+        pidof nickel || break
+    done
+}
+
+progress_stop() {
+    rm /tmp/magicmemory-progress && sleep 1
+}
+
+progress_black() {
+    stop_progress
+    touch /tmp/magicmemory-progress
+    while [ -e /tmp/magicmemory-progress ]
+    do
+        cat /dev/zero | /usr/local/Kobo/pickel showpic 1
+        sleep 1
+    done
+}
+
+progress() {
+    stop_progress
+    touch /tmp/magicmemory-progress
+    [ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
+    local i=0
+    while [ -e /tmp/magicmemory-progress ]
+    do
+        i=$((($i+${1:-1})%11))
+        nice zcat /etc/images/"$PREFIX"on-"$i".raw.gz | /usr/local/Kobo/pickel showpic 1;
+        sleep 1
+    done
+}
+
+progress_backwards() {
+    progress 10
+}
+
+mmc_detect() {
+    local error=1
+    for driver in /sys/bus/platform/drivers/*/unbind
+    do
+        driver=$(dirname "$driver")
+        for device in "$driver"/*/
+        do
+            if [ -e "$device"/mmc_host/mmc0 ]
+            then
+                MMC_DRIVER="$driver"
+                MMC_DEVICE=$(basename "$device")
+                error=0
+            fi
+        done
+    done
+
+    return $error
+}
+
+mmc_unbind() {
+    sync
+    echo "$MMC_DEVICE" > "$MMC_DRIVER"/unbind && sleep 1
+}
+
+mmc_bind() {
+    mmc_unbind
+    echo "$MMC_DEVICE" > "$MMC_DRIVER"/bind && sleep 1
+}
+
+# Main:
+udev_quirks
+mmc_detect || exit
+nickel_wait
+nickel_grab_env
+nickel_kill
+umount /mnt/onboard
+sync
+
+progress_backwards &
+
+mkdir /DATA
+# Only the recovery partition has mkfs.ext4, pilfer it.
+mount -o ro /dev/mmcblk0p2 /DATA
+cp /DATA/sbin/mkfs.ext4 /
+umount /DATA
+# Copy bootloader, kernel, recovery to tmpfs...
+dd if=/dev/mmcblk0 count=$(cat /sys/block/mmcblk0/mmcblk0p1/start) | gzip > /DATA/mmcblk0.gz
+dd if=/dev/mmcblk0p2 bs=64k | gzip > /DATA/mmcblk0p2.gz
+
+mmc_unbind
+
+progress_black &
+
+while sleep 60 # FIXME: detect actual card change
 do
-    pidof nickel && break
+    mmc_bind
+    blockdev --getsize64 /dev/mmcblk0 && break
 done
 
-# udev might call twice
-mkdir /tmp/MagicMemory || exit
+progress &
 
-# steal nickel's environment
-eval $(xargs -0 < /proc/$(pidof nickel)/environ)
-export $(xargs -0 < /proc/$(pidof nickel)/environ | sed -e 's@=[^ ]*@@g')
-cd / # PWD sanity
+# Populate the new card.
+gunzip < /DATA/mmcblk0.gz | dd of=/dev/mmcblk0 bs=64k
+rm /DATA/mmcblk0.gz
+mmc_bind # redetect partitions
+gunzip < /DATA/mmcblk0p2.gz | dd of=/dev/mmcblk0p2 bs=64k
+rm /DATA/mmcblk0p2.gz
 
-# kill and resurrect nickel in tmpfs
-killall nickel
+# Restore the rootfs.
+/mkfs.ext4 -L rootfs -m 0 /dev/mmcblk0p1
+rm /mkfs.ext4
+mkdir /DATA/rootfs /DATA/tmpfs
+mount -o bind / /DATA/tmpfs
+mount /dev/mmcblk0p1 /DATA/rootfs
+cp -a /DATA/tmpfs/. /DATA/rootfs/.
+umount /DATA/tmpfs/
+rm -rf /DATA/rootfs/DATA/
+rm /DATA/rootfs/tmpfs_magic_udev
+rm /DATA/rootfs/tmpfs_magic_init
+umount /DATA/rootfs/
+
+# Create the user partition.
+echo $'\nd\n3\nn\np\n4\n1\n\nn\np\n\n\nd\n4\nt\n3\nb\nw\n' | fdisk /dev/mmcblk0
+mmc_bind # redetect partition
+mkfs.vfat -n KOBOeReader /dev/mmcblk0p3
+
+# Done.
+reboot
 sleep 10
-umount /mnt/onboard
-# FIXME:
-echo 1 > /sys/module/mmc_core/parameters/removable
-/usr/local/Kobo/nickel -platform kobo -skipFontLoad &
-
-echo MUAHAHAHA > /I_AM_FREE
-
-sleep 10000
-
 EOF
 # --- End of tmpfs_magic_udev. ---
 chmod +x /tmpfs_magic_udev
@@ -87,4 +207,5 @@ EOF
 chmod +x /tmpfs_magic_init
 
 # run /tmpfs_magic_init
+rm /sbin/magic_init
 exec /tmpfs_magic_init
