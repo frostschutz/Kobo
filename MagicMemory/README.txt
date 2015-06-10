@@ -33,6 +33,7 @@ How to use:
     ~~~ OS is being loaded into RAM. This might take a while. ~~~
     * You get the normal bootup progress bar and the main screen appears.
       (If you don't use nickel by default, start nickel.)
+    * A progress bar appears.
     ~~~ Data is being loaded into RAM. This might take a while. ~~~
     * The screen goes fully black.
 ---> Without turning the reader off, take out the old internal SD card. <---
