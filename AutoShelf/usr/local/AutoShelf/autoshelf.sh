@@ -53,6 +53,13 @@ autoshelf() {
 
     local i=0
 
+    if [ -e /mnt/onboard/.autoshelf-uninstall ]
+    then
+        echo "DELETE FROM Activity WHERE Type='Shelf' AND Id LIKE '%/';"
+        echo "END TRANSACTION;"
+        return
+    fi
+
     sqlite3 /mnt/onboard/.kobo/KoboReader.sqlite "
     SELECT ContentID FROM content
     WHERE ContentType = 6
@@ -117,6 +124,13 @@ then
         echo "Updating database..."
         echo "$result" | md5sum > /usr/local/AutoShelf/md5sum
         echo "$result" | sqlite3 /mnt/onboard/.kobo/KoboReader.sqlite
+    fi
+
+    if [ -e /mnt/onboard/.autoshelf-uninstall ]
+    then
+        mv /mnt/onboard/.autoshelf-uninstall /mnt/onboard/.autoshelf-uninstalled-$(date +%Y%M%d-%H%M)
+        rm /etc/udev/rules.d/autoshelf.rules
+        rm -rf /usr/local/AutoShelf
     fi
 fi
 
