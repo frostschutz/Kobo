@@ -3,7 +3,7 @@
 # call stack: magic_init -> tmpfs_init -> real_init -> magic_udev
 
 # restore original init first
-rm /sbin/init
+rm /sbin/init /sbin/magic_init
 ln -s ../bin/busybox /sbin/init
 sync
 
@@ -29,6 +29,8 @@ EOF
 # --- tmpfs_magic_udev: ---
 cat > /tmpfs_magic_udev << 'EOF'
 #!/bin/sh
+
+rm /etc/udev/rules.d/magicmemory.rules
 
 udev_quirks() {
     # udev kills slow scripts
@@ -64,34 +66,36 @@ nickel_kill() {
 }
 
 progress_stop() {
-    rm /tmp/magicmemory-progress && sleep 1
-}
-
-progress_black() {
-    stop_progress
-    touch /tmp/magicmemory-progress
-    while [ -e /tmp/magicmemory-progress ]
-    do
-        cat /dev/zero | /usr/local/Kobo/pickel showpic 1
-        sleep 1
-    done
+    rm /tmp/magicmemory-progress*
 }
 
 progress() {
-    stop_progress
-    touch /tmp/magicmemory-progress
+    local pid="$RANDOM$RANDOM"
+    progress_stop
+    touch /tmp/magicmemory-progress-"$pid"
     [ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
     local i=0
-    while [ -e /tmp/magicmemory-progress ]
+    while [ -e /tmp/magicmemory-progress-"$pid" ]
     do
-        i=$((($i+${1:-1})%11))
-        nice zcat /etc/images/"$PREFIX"on-"$i".raw.gz | /usr/local/Kobo/pickel showpic 1;
-        sleep 1
-    done
+        if [ "$1" == "black" ]
+        then
+            cat /dev/zero | /usr/local/Kobo/pickel showpic 1
+        elif [ "$1" == "white" ]
+        then
+            tr '\x00' '\xff' < /dev/zero | /usr/local/Kobo/pickel showpic 1
+        else
+            i=$((($i+${1:-1})%11))
+            zcat /etc/images/"$PREFIX"on-"$i".raw.gz | /usr/local/Kobo/pickel showpic 1
+        fi
+
+        sleep 3
+     done
 }
 
-progress_backwards() {
-    progress 10
+nuke() {
+    progress 0 &
+    sleep 999999
+    exit
 }
 
 mmc_detect() {
@@ -114,7 +118,7 @@ mmc_detect() {
 }
 
 mmc_unbind() {
-    sync
+    sync && sync
     echo "$MMC_DEVICE" > "$MMC_DRIVER"/unbind && sleep 1
 }
 
@@ -132,57 +136,79 @@ nickel_kill
 umount /mnt/onboard
 sync
 
-progress_backwards &
-
+# Grab bootloader and kernel.
+progress 10 &
 mkdir /DATA
-# Only the recovery partition has mkfs.ext4, pilfer it.
-mount -o ro /dev/mmcblk0p2 /DATA
-cp /DATA/sbin/mkfs.ext4 /
-umount /DATA
-# Copy bootloader, kernel, recovery to tmpfs...
-dd if=/dev/mmcblk0 count=$(cat /sys/block/mmcblk0/mmcblk0p1/start) | gzip > /DATA/mmcblk0.gz
-dd if=/dev/mmcblk0p2 bs=64k | gzip > /DATA/mmcblk0p2.gz
+dd if=/dev/mmcblk0 bs=64k count=$((1+$(cat /sys/block/mmcblk0/mmcblk0p1/start)/128)) | gzip > /DATA/mmcblk0.gz || nuke
 
-mmc_unbind
+# Grab the recoveryfs.
+mkdir /DATA/recoveryfs
+mount -o ro /dev/mmcblk0p2 /DATA/recoveryfs || nuke
+tar -czf /DATA/recoveryfs.tgz -C /DATA/recoveryfs . || nuke
+# Only recoveryfs has mkfs.ext4, so grab that too.
+cp /DATA/recoveryfs/sbin/mkfs.ext4 / || nuke
+umount /DATA/recoveryfs
 
-progress_black &
+# Card removal.
+progress black &
 
-while sleep 60 # FIXME: detect actual card change
+while blockdev --getsize64 /dev/mmcblk0
 do
+    mmc_unbind
+    sleep 5
     mmc_bind
-    blockdev --getsize64 /dev/mmcblk0 && break
 done
 
-progress &
+# Card insertion.
+progress white &
 
-# Populate the new card.
-gunzip < /DATA/mmcblk0.gz | dd of=/dev/mmcblk0 bs=64k
+while ! blockdev --getsize64 /dev/mmcblk0
+do
+    mmc_unbind
+    sleep 5
+    mmc_bind
+done
+
+progress 1 &
+
+# Restore bootloader and kernel.
+gunzip < /DATA/mmcblk0.gz > /dev/mmcblk0 || nuke
+mmc_bind # force redetect partitions
 rm /DATA/mmcblk0.gz
-mmc_bind # redetect partitions
-gunzip < /DATA/mmcblk0p2.gz | dd of=/dev/mmcblk0p2 bs=64k
-rm /DATA/mmcblk0p2.gz
 
-# Restore the rootfs.
-/mkfs.ext4 -L rootfs -m 0 /dev/mmcblk0p1
+# Make a new user partition.
+# del 3, new 4 (1-???), new 3 (???-end), del 4, type 3 b (FAT32), write
+echo $'\nd\n3\nn\np\n4\n1\n\nn\np\n\n\nd\n4\nt\n3\nb\nw\n' | fdisk /dev/mmcblk0 || nuke
+mmc_bind # force redetect partitions
+dd if=/dev/zero of=/dev/mmcblk0p3 bs=64k count=1
+mkfs.vfat -n KOBOeReader /dev/mmcblk0p3 || nuke
+
+# Restore the recoveryfs.
+dd if=/dev/zero of=/dev/mmcblk0p2 bs=64k count=1
+/mkfs.ext4 -L recoveryfs -m 0 /dev/mmcblk0p2 || nuke
+mount /dev/mmcblk0p2 /DATA/recoveryfs
+tar -xzf /DATA/recoveryfs.tgz -C /DATA/recoveryfs || nuke
+umount /DATA/recoveryfs
+rmdir /DATA/recoveryfs
+rm /DATA/recoveryfs.tgz
+
+# Restore the rootfs from tmpfs.
+dd if=/dev/zero of=/dev/mmcblk0p1 bs=64k count=1
+/mkfs.ext4 -L rootfs -m 0 /dev/mmcblk0p1 || nuke
 rm /mkfs.ext4
 mkdir /DATA/rootfs /DATA/tmpfs
 mount -o bind / /DATA/tmpfs
 mount /dev/mmcblk0p1 /DATA/rootfs
-cp -a /DATA/tmpfs/. /DATA/rootfs/.
+cp -a /DATA/tmpfs/. /DATA/rootfs/. || nuke
 umount /DATA/tmpfs/
 rm -rf /DATA/rootfs/DATA/
-rm /DATA/rootfs/tmpfs_magic_udev
-rm /DATA/rootfs/tmpfs_magic_init
+rm /DATA/rootfs/tmpfs_magic_*
 umount /DATA/rootfs/
 
-# Create the user partition.
-echo $'\nd\n3\nn\np\n4\n1\n\nn\np\n\n\nd\n4\nt\n3\nb\nw\n' | fdisk /dev/mmcblk0
-mmc_bind # redetect partition
-mkfs.vfat -n KOBOeReader /dev/mmcblk0p3
-
 # Done.
+sync
 reboot
-sleep 10
+sleep 9999
 EOF
 # --- End of tmpfs_magic_udev. ---
 chmod +x /tmpfs_magic_udev
@@ -190,9 +216,6 @@ chmod +x /tmpfs_magic_udev
 # --- tmpfs_magic_init: ---
 cat > /tmpfs_magic_init << 'EOF'
 #!/bin/sh
-
-# uninstall
-rm /sbin/magic_init
 
 # umount mmc root
 umount /put/new /put/old /put/put
@@ -207,5 +230,4 @@ EOF
 chmod +x /tmpfs_magic_init
 
 # run /tmpfs_magic_init
-rm /sbin/magic_init
 exec /tmpfs_magic_init
