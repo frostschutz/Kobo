@@ -105,7 +105,7 @@ mmc_detect() {
         driver=$(dirname "$driver")
         for device in "$driver"/*/
         do
-            if [ -e "$device"/mmc_host/mmc{$1:-0} ]
+            if [ -e "$device"/mmc_host/mmc${1:-0} ]
             then
                 MMC_DRIVER="$driver"
                 MMC_DEVICE=$(basename "$device")
