@@ -108,6 +108,7 @@ umount /mnt/*
 sync
 
 # Mount the old stuff.
+sleep 1
 progress 10 &
 mount -t tmpfs none /mnt # also prevents /mnt/sd mounts
 mkdir -p /mnt/OLD/rootfs /mnt/OLD/recoveryfs /mnt/OLD/data
@@ -115,9 +116,9 @@ mkdir -p /mnt/NEW/rootfs /mnt/NEW/recoveryfs /mnt/NEW/data
 mount -o bind / /mnt/OLD/rootfs || nuke
 mount -o ro /dev/mmcblk0p2 /mnt/OLD/recoveryfs || nuke
 mount -o ro /dev/mmcblk0p3 /mnt/OLD/data || nuke
-sleep 5
 
 # Card removal.
+sleep 1
 progress black &
 
 while blockdev --getsize64 /dev/mmcblk1
@@ -128,6 +129,7 @@ do
 done
 
 # Card insertion.
+sleep 1
 progress white &
 
 while ! blockdev --getsize64 /dev/mmcblk1
@@ -137,6 +139,7 @@ do
     mmc_bind
 done
 
+sleep 1
 progress 1 &
 
 # Copy bootloader and kernel.
