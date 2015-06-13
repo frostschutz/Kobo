@@ -15,6 +15,11 @@ http://www.mobileread.com/forums/showthread.php?t=254554
 Move all hyphenation dictionaries to USB storage /.hyph/ for editing.
 http://www.mobileread.com/forums/showthread.php?p=3004080#post3004080
 
+- MagicMemory - 
+
+Replace the Kobo's internal SD card on the fly.
+http://www.mobileread.com/forums/showthread.php?t=261578
+
 - ScreenSaver -
 
 Display a random screensaver PNG image on standby/poweroff. H2O only.
