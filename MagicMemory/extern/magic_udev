@@ -100,7 +100,7 @@ mmc_bind() {
 # Main:
 udev_quirks
 rm /magic_udev
-mmc_detect 1 || exit
+mmc_detect 2 || exit
 nickel_wait
 nickel_grab_env
 nickel_kill
