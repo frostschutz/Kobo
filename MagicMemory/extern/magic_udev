@@ -157,7 +157,7 @@ mount /dev/mmcblk1p2 /mnt/NEW/recoveryfs
 
 # Create the new rootfs.
 dd if=/dev/zero of=/dev/mmcblk1p1 bs=64k count=1
-/mnt/OLD/recoveryfs/usr/sbin/mkfs.ext4 -L rootfs -m 0 /dev/mmcblk1p1 || nuke
+/mnt/OLD/recoveryfs/sbin/mkfs.ext4 -L rootfs -m 0 /dev/mmcblk1p1 || nuke
 mount /dev/mmcblk1p1 /mnt/NEW/rootfs
 
 # Actually copy the data.
