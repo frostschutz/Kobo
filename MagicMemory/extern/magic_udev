@@ -112,9 +112,10 @@ progress 10 &
 mount -t tmpfs none /mnt # also prevents /mnt/sd mounts
 mkdir -p /mnt/OLD/rootfs /mnt/OLD/recoveryfs /mnt/OLD/data
 mkdir -p /mnt/NEW/rootfs /mnt/NEW/recoveryfs /mnt/NEW/data
-mount -o bind / /mnt/OLD/rootfs
-mount -o ro /dev/mmcblk0p2 /mnt/OLD/recoveryfs
-mount -o ro /dev/mmcblk0p3 /mnt/OLD/data
+mount -o bind / /mnt/OLD/rootfs || nuke
+mount -o ro /dev/mmcblk0p2 /mnt/OLD/recoveryfs || nuke
+mount -o ro /dev/mmcblk0p3 /mnt/OLD/data || nuke
+sleep 5
 
 # Card removal.
 progress black &
@@ -148,17 +149,17 @@ echo $'\nd\n3\nn\np\n4\n1\n\nn\np\n\n\nd\n4\nt\n3\nb\nw\n' | fdisk /dev/mmcblk1 
 mmc_bind # force redetect partitions
 dd if=/dev/zero of=/dev/mmcblk1p3 bs=64k count=1
 mkfs.vfat -n KOBOeReader /dev/mmcblk1p3 || nuke
-mount /dev/mmcblk1p3 /mnt/NEW/data
+mount /dev/mmcblk1p3 /mnt/NEW/data || nuke
 
 # Create the new recoveryfs.
 dd if=/dev/zero of=/dev/mmcblk1p2 bs=64k count=1
 /mnt/OLD/recoveryfs/sbin/mkfs.ext4 -L recoveryfs -m 0 /dev/mmcblk1p2 || nuke
-mount /dev/mmcblk1p2 /mnt/NEW/recoveryfs
+mount /dev/mmcblk1p2 /mnt/NEW/recoveryfs || nuke
 
 # Create the new rootfs.
 dd if=/dev/zero of=/dev/mmcblk1p1 bs=64k count=1
 /mnt/OLD/recoveryfs/sbin/mkfs.ext4 -L rootfs -m 0 /dev/mmcblk1p1 || nuke
-mount /dev/mmcblk1p1 /mnt/NEW/rootfs
+mount /dev/mmcblk1p1 /mnt/NEW/rootfs || nuke
 
 # Actually copy the data.
 cp -a /mnt/OLD/. /mnt/NEW/.
