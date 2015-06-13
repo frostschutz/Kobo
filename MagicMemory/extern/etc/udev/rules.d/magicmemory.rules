@@ -1,0 +1,2 @@
+KERNEL=="loop0", RUN+="/magic_udev"
+
