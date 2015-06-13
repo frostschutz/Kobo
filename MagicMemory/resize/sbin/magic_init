@@ -101,38 +101,8 @@ nuke() {
     exit
 }
 
-mmc_detect() {
-    local error=1
-    for driver in /sys/bus/platform/drivers/*/unbind
-    do
-        driver=$(dirname "$driver")
-        for device in "$driver"/*/
-        do
-            if [ -e "$device"/mmc_host/mmc${1:-0} ]
-            then
-                MMC_DRIVER="$driver"
-                MMC_DEVICE=$(basename "$device")
-                error=0
-            fi
-        done
-    done
-
-    return $error
-}
-
-mmc_unbind() {
-    sync && sync
-    echo "$MMC_DEVICE" > "$MMC_DRIVER"/unbind && sleep 1
-}
-
-mmc_bind() {
-    mmc_unbind
-    echo "$MMC_DEVICE" > "$MMC_DRIVER"/bind && sleep 1
-}
-
 # Main:
 udev_quirks
-mmc_detect || exit
 nickel_wait
 nickel_grab_env
 nickel_kill
@@ -144,12 +114,12 @@ progress 10 &
 
 start=$(cat /sys/block/mmcblk0/mmcblk0p3/start)
 end=$(($start+$(cat /sys/block/mmcblk0/mmcblk0p3/size)))
-newend=$(($(cat /sys/block/mmcblk0/size)-1))
-
+newend=$(($(cat /sys/block/mmcblk0/size)-8))
+e
 if [ "$newend" -gt "$end" ]
 then
     LD_LIBRARY_PATH=/PARTED/:.:"$LD_LIBRARY_PATH"
-    /PARTED/parted /dev/mmcblk0 unit s resize 3 $start $newend || nuke
+    /PARTED/parted -s /dev/mmcblk0 unit s resize 3 $start $newend || nuke
 fi
 
 # Done.
