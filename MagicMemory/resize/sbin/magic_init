@@ -115,7 +115,7 @@ progress 10 &
 start=$(cat /sys/block/mmcblk0/mmcblk0p3/start)
 end=$(($start+$(cat /sys/block/mmcblk0/mmcblk0p3/size)))
 newend=$(($(cat /sys/block/mmcblk0/size)-8))
-e
+
 if [ "$newend" -gt "$end" ]
 then
     LD_LIBRARY_PATH=/PARTED/:.:"$LD_LIBRARY_PATH"
