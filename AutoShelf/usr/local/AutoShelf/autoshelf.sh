@@ -8,10 +8,11 @@ PATH="/usr/local/AutoShelf":"$PATH"
 progress() {
     [ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
     local i=0
-    while [ -e /tmp/suspend-nickel ]; do
+    while [ -e /tmp/suspend-nickel ]
+    do
         i=$((($i+10)%11)) # backwards
-        nice zcat /etc/images/"$PREFIX"on-"$i".raw.gz | /usr/local/Kobo/pickel showpic 1;
-        usleep 250000;
+        nice zcat /etc/images/"$PREFIX"on-"$i".raw.gz | /usr/local/Kobo/pickel showpic 1
+        sleep 2
     done
 }
 
