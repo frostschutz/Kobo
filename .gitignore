@@ -7,7 +7,8 @@ libstdbuf.so
 lodepng.c
 lodepng.h
 patch32lsb
-pngcat
+pngshow
 sqlite3
 stdbuf
 usr/local/Kobo/*
+mxcfb.h
