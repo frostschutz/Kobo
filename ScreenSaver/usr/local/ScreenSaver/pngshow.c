@@ -50,24 +50,21 @@ int main(int argc, char *argv[])
     memset(fb0map, ~0, screensize); // white
 
     // image[0] is the top left corner, image[0..width*3] the top row
-
     if(screen.rotate % 2)
     {
         xres = screen.xres;
         yres = screen.yres;
-        xmax = width;
-        ymax = height;
-        line = screen.xres_virtual;
     }
 
     else
     {
         xres = screen.yres;
         yres = screen.xres;
-        xmax = height;
-        ymax = width;
-        line = screen.xres_virtual;
     }
+
+    xmax = width;
+    ymax = height;
+    line = screen.xres_virtual;
 
     if(xmax > xres)
     {
@@ -107,9 +104,9 @@ int main(int argc, char *argv[])
             break;
         case 2:
             // fb0map[0] is the top right corner, fb0map[0..xres_virtual*2] the right column
-            for(x=ymax; x--;)
+            for(x=xmax; x--;)
             {
-                for(y=xmax; y--;)
+                for(y=ymax; y--;)
                 {
                     fb0map[2*((xres-x-1)*line+y)+1] = (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5);
                     fb0map[2*((xres-x-1)*line+y)+0] = (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3);
@@ -118,9 +115,9 @@ int main(int argc, char *argv[])
             break;
         case 0:
             // fb0map[0] is the bottom left corner, fb0map[0..xres_virtual*2] the left column
-            for(x=ymax; x--;)
+            for(x=xmax; x--;)
             {
-                for(y=xmax; y--;)
+                for(y=ymax; y--;)
                 {
                     fb0map[2*(x*line+(yres-y-1))+1] = (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5);
                     fb0map[2*(x*line+(yres-y-1))+0] = (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3);
