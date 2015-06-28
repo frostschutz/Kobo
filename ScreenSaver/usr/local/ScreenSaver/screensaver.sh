@@ -20,6 +20,19 @@ mkdir /tmp/ScreenSaver || exit
 
 PATH="/usr/local/ScreenSaver:$PATH"
 
+uninstall_check() {
+    if [ -e /mnt/onboard/.ScreenSaver/uninstall ]
+    then
+        cd /mnt/onboard/.ScreenSaver
+        mv uninstall uninstalled-$(date +%Y%m%d-%H%M)
+        rm -f /etc/udev/rules.d/screensaver.rules
+        rm -rf /usr/local/ScreenSaver
+        exit
+    fi
+}
+
+uninstall_check
+
 # 3.15.0 workaround: IconPowerView message no longer appears, instead we get this:
 # nickel: QWidget(0x5d84d8, name = "infoContainer")  does not have a property named  "spacing"
 
@@ -41,13 +54,7 @@ do
 
     cd /mnt/onboard/.ScreenSaver || exit
 
-    if [ -e uninstall ]
-    then
-        mv uninstall uninstalled-$(date +%Y%M%d-%H%M)
-        rm -f /etc/udev/rules.d/screensaver.rules
-        rm -rf /usr/local/ScreenSaver
-        exit
-    fi
+    uninstall_check
 
     # show random picture
     set -- *.png
