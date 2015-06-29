@@ -1,3 +1,10 @@
+/*
+ * gcc -Wall -O2 -s \
+ *     -DLODEPNG_NO_COMPILE_ENCODER -DLODEPNG_NO_COMPILE_ERROR_TEXT \
+ *     lodepng.c pngshow.c -o pngshow
+ *
+ */
+
 #include "lodepng.h"
 #include "mxcfb.h"
 #include <fcntl.h>
@@ -5,6 +12,8 @@
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 int main(int argc, char *argv[])
 {
@@ -47,9 +56,6 @@ int main(int argc, char *argv[])
         exit(10);
     }
 
-    memset(fb0map, ~0, screensize); // white
-
-    // image[0] is the top left corner, image[0..width*3] the top row
     if(screen.rotate % 2)
     {
         xres = screen.xres;
@@ -75,6 +81,10 @@ int main(int argc, char *argv[])
     {
         ymax = yres;
     }
+
+    memset(fb0map, ~0, screensize); // white
+
+    // image[0] is the top left corner, image[0..width*3] the top row
 
     switch(screen.rotate)
     {
