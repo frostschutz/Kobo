@@ -34,21 +34,21 @@ uninstall_check() {
 uninstall_check
 
 # 3.15.0 workaround: IconPowerView message no longer appears, instead we get this:
-# nickel: QWidget(0x5d84d8, name = "infoContainer")  does not have a property named  "spacing"
+# nickel: QWidget(0x5d84d8, name = "infoContainer") does not have a property named
 
-oldtimestamp=$(date +%s)
+oldtimestamp=""
 
-logread -f | stdbuf -oL grep -E '>>> IconPowerView|nickel: QWidget.*"infoContainer".*"spacing"' | while read line
+logread -f | stdbuf -oL grep -E '>>> IconPowerView|nickel: QWidget.*"infoContainer".*does not have' | while read month day hour line
 do
     # QWidget message is noisy.
-    timestamp=$(date +%s)
+    timestamp="$month$day$hour"
 
-    if [ $(($timestamp-$oldtimestamp)) -lt 10 ]
+    if [ "$line" = "" -o "$timestamp" = "$oldtimestamp" ]
     then
         continue
     fi
 
-    oldtimestamp=$timestamp
+    oldtimestamp="$timestamp"
 
     # End of 3.15.0 workaround
 
@@ -59,12 +59,15 @@ do
     # show random picture
     set -- *.png
     rnd="$RANDOM$RANDOM$RANDOM"
-    file=$(eval 'echo "${'$((1 + $rnd % $#))'}"')
+    file="$(eval 'echo "${'$((1 + $rnd % $#))'}"')"
 
-    sleep 1
-    pngshow "$file"
-    sleep 1
-    pngshow "$file"
+    (
+        pngshow "$file" &
+        sleep 0.6
+        pngshow "$file" &
+        sleep 0.6
+        pngshow "$file"
+    ) &
 
     cd /
 done
