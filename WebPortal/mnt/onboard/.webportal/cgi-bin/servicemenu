@@ -202,13 +202,13 @@ _view_list()
     _chunk '</ul>'
 
     _chunk '<ul>'
-    _chunk '<li><a href="?action=bookdb">Delete Book DB</a></li>'
+    _chunk '<li><a nohref="?action=bookdb">Delete Book DB [DISABLED]</a></li>'
     _chunk '</ul>'
 
-#    _chunk '<ul>'
-#    _chunk '<li><a href="?action=format&amp;target=int">Format Internal Memory</a></li>'
-#    _chunk '<li><a href="?action=format&amp;target=ext">Format External Memory (SDCARD)</a></li>'
-#    _chunk '</ul>'
+    _chunk '<ul>'
+    _chunk '<li><a nohref="?action=format&amp;target=int">Format Internal Memory [DISABLED]</a></li>'
+    _chunk '<li><a href="?action=format&amp;target=ext">Format External Memory (SDCARD)</a></li>'
+    _chunk '</ul>'
 
     _chunk '<ul>'
     _chunk '<li><a href="?action=reboot">Reboot</a></li>'
