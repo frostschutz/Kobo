@@ -1,0 +1,381 @@
+#!/bin/busybox sh
+
+# --- Constants: ---
+
+DEV_INT=/dev/mmcblk0
+DEV_INTFAT=/dev/mmcblk0p1
+MNT_INTFAT=/mnt/MOVIFAT
+
+DEV_EXT=/dev/mmcblk1
+DEV_EXTFAT=/dev/mmcblk1p1
+MNT_EXTFAT=/mnt/SDFAT
+
+SIZE_INT=/sys/block/mmcblk0/size
+SIZE_INTFAT=/sys/block/mmcblk0/mmcblk0p1/size
+SIZE_EXT=/sys/block/mmcblk1/size
+SIZE_EXTFAT=/sys/block/mmcblk1/mmcblk1p1/size
+
+TMPFILE=/dev/shm/servicemenu
+
+# --- Helpers: ---
+
+_chunk()
+{
+    CHUNK="$1"
+    printf "%X\r\n" ${#CHUNK}
+    printf "%s\r\n" "$CHUNK"
+}
+
+# htmlspecialchars
+_htmlspecialchars()
+{
+    value="`echo -n "$2" | sed -r -e 's@&@\&amp;@g' -e 's@[""]@\&quot;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g'`"
+    eval "$1"'="$value"'
+}
+
+# urlencode
+_urlencode()
+{
+    value="`echo -n "$2" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g'`"
+    eval "$1"'="$value"'
+}
+
+# parse a=b&c=d data
+_parse()
+{
+    PREFIX=$1
+    DATA=$2
+
+    while [ "$DATA" != "" ]
+    do
+        FIELD="`echo "$DATA" | cut -d '&' -f 1`"
+        DATA="${DATA:$((${#FIELD}+1))}"
+
+        key="`echo "$FIELD" | cut -d '=' -f 1 | sed -r -e s@[^a-zA-Z0-9_]@_@g`"
+        value="`echo "$FIELD" | cut -s -d '=' -f 2-'`"
+
+        if [ "$key" != "" ]
+        then
+            eval "$PREFIX""$key"'="`httpd -d "$value"`"'
+        fi
+    done
+}
+
+# print header
+_header()
+{
+    echo -n -e 'HTTP/1.1 200 OK\r\n'
+    echo -n -e 'Content-Type: text/html; charset=UTF-8\r\n'
+    echo -n -e 'Transfer-Encoding: chunked\r\n'
+    echo -n -e 'Cache-Control: no-cache, must-revalidate\r\n'
+    echo -n -e 'Expires: Thu, 01 Jan 1970 01:10:00 +0100\r\n'
+    echo -n -e '\r\n'
+    # echo -n -e 'Content-Type: text/html; charset=UTF-8\r\n\r\n'
+    _chunk "`printf "%4096s" " "`"
+    _chunk '<html><head><style type="text/css">'
+
+    _chunk 'input, textarea, select {
+border: 1px solid #555;
+padding: 0.5em;
+font-size: 15px;
+line-height: 1.2em;
+width: 95%;
+background: #fff;
+background: -webkit-gradient(linear, left top, left bottom, from(#fff), to(#ccc));
+-webkit-appearance: none;
+-webkit-box-shadow: 1px 1px 1px #fff;
+-webkit-border-radius: 0.5em;
+}'
+
+    _chunk '
+#progress {
+  margin: 0px auto;
+  width: 60%;
+  height: 30px;
+  border: 8px double #222;
+  overflow: hidden;
+  background: #fff;
+}
+#progressbar {
+  width: 0%;
+  height: 30px;
+  border-right: 4px solid #000;
+  background: #aaa;
+  position: relative;
+  text-align: center;
+  font-size: 25px;
+}'
+
+    _chunk '</style></head><body>'
+    _chunk '<h1>Service Menu</h1>'
+}
+
+# print footer
+_footer()
+{
+    _chunk '<hr>'
+
+    # extra links
+    query="$1"
+    shift
+    text="$1"
+    shift
+
+    while [ "$text" != "" ]
+    do
+        _chunk '<a href="?'$query'">'$text'</a> | '
+        query="$1"
+        shift
+        text="$1"
+        shift
+    done
+
+    # standard footer
+    _chunk '<a href="?">Back to Service Menu</a>'
+
+    _chunk '</body></html>'
+    _chunk '' # terminator
+    exit
+}
+
+# print error message
+# argument: msg
+_die()
+{
+    _chunk "<p>Error: $1</p>"
+    _footer
+    exit
+}
+
+# print yesno dialog
+# argument: question yesquery noquery
+_yesno()
+{
+    _chunk "<p> $1 </p>"
+    #_chunk '<a href="?'$2'">Yes</a> <a href="?'$3'">No</a>'
+    _footer "$2" Yes "$3" No
+    exit
+}
+
+# print progress bar
+_progressbar()
+{
+    TOTAL="$1"
+    CURRENT="$2"
+
+    percent=$(($CURRENT*100/$TOTAL))
+
+    _chunk '<div id="progress"><div style="width: '$percent'% !important;" id="progressbar">'$percent'%</div></div>'
+}
+
+# --- Views: ---
+
+_view()
+{
+    case "$GETaction" in
+        "")
+            _view_list
+            ;;
+        "check")
+            _view_check
+            ;;
+        "format")
+            _view_format
+            ;;
+        "bookdb")
+            _view_bookdb
+            ;;
+        "reboot")
+            _view_reboot
+            ;;
+        *)
+            _die "Unknown action: $GETaction"
+            ;;
+    esac
+}
+
+_view_list()
+{
+    _chunk '<ul>'
+    _chunk '<li><a href="?action=check&amp;target=int">Check Internal Memory</a></li>'
+    _chunk '<li><a href="?action=check&amp;target=ext">Check External Memory (SDCARD)</a></li>'
+    _chunk '</ul>'
+
+    _chunk '<ul>'
+    _chunk '<li><a href="?action=bookdb">Delete Book DB</a></li>'
+    _chunk '</ul>'
+
+    _chunk '<ul>'
+    _chunk '<li><a href="?action=format&amp;target=int">Format Internal Memory</a></li>'
+    _chunk '<li><a href="?action=format&amp;target=ext">Format External Memory (SDCARD)</a></li>'
+    _chunk '</ul>'
+
+    _chunk '<ul>'
+    _chunk '<li><a href="?action=reboot">Reboot</a></li>'
+    _chunk '</ul>'
+}
+
+_view_check()
+{
+    case "$GETtarget" in
+        "int")
+            NAME="Internal Memory"
+            TARGET="$DEV_INT"
+            SIZE="$SIZE_INT"
+            ;;
+        "ext")
+            NAME="External Memory (SDCARD)"
+            TARGET="$DEV_EXT"
+            SIZE="$SIZE_EXT"
+            ;;
+    esac
+
+    SIZE=$((`cat "$SIZE"`))
+    SIZE=$((($SIZE+2047)/2048))
+
+    if [ "$SIZE" == "0" ]
+    then
+        _die "Zero Capacity (0 MiB) detected for $NAME."
+    else
+        _chunk "<p>Checking $NAME ($SIZE MiB). Please wait...</p>"
+    fi
+
+    i=$(($GETprogress))
+    ilimit=$(($i+128))
+
+    if [ $i == 0 ]
+    then
+        if [ -e "$TMPFILE" ]
+        then
+            rm -f "$TMPFILE"
+        fi
+        touch "$TMPFILE"
+    fi
+
+    _progressbar $(($SIZE)) $(($i))
+
+    _chunk "<ul>`cat "$TMPFILE"`</ul>"
+
+    _chunk "`printf "%4096s" " "`"
+    _chunk "`printf "%4096s" " "`"
+    _chunk "<p></p>"
+
+    refresh=0
+
+    while [ $i -lt $ilimit -a $i -lt $SIZE ]
+    do
+        dd bs=1M count=1 skip="$i" if="$TARGET" of=/dev/null 2> /dev/null \
+            || echo "<li>Read Error at $i MiB.</li>" >> "$TMPFILE"
+        i=$(($i+1))
+        refresh=1
+    done
+
+    if [ $refresh == 1 ]
+    then
+        _chunk "<meta http-equiv=\"refresh\" content=\"2;URL='?action=check&amp;target=$GETtarget&amp;progress=$i'\">"
+    else
+        _chunk '<p>Done.</p>'
+    fi
+}
+
+_view_bookdb()
+{
+    if [ "$GETconfirm" != "1" ]
+    then
+        _yesno "<p>Are you sure you want to delete the Book DB?</p><p><b>This will erase your reading progress for all books.</b></p>" "action=bookdb&amp;confirm=1" ""
+    fi
+
+    rm /mnt/MOVIFAT/system/bookDB.* >& /dev/null
+    sync
+
+    _chunk "<p>Book DB deleted.</p>"
+}
+
+_view_format()
+{
+    case "$GETtarget" in
+        "int")
+            NAME="Internal Memory (FAT32 Partition)"
+            TARGET="$DEV_INTFAT"
+            SIZE="$SIZE_INTFAT"
+            MNT="$MNT_INTFAT"
+            ;;
+        "ext")
+            NAME="External Memory (SDCARD)"
+            TARGET="$DEV_EXTFAT"
+            SIZE="$SIZE_EXT"
+            MNT="$MNT_EXTFAT"
+            ;;
+    esac
+
+    SIZE=$((`cat "$SIZE"`))
+    SIZE=$((($SIZE+2047)/2048))
+
+    if [ "$SIZE" == "0" ]
+    then
+        _die "Zero capacity (0 MiB) detected for $NAME."
+    else
+        _chunk "<p>$SIZE MiB capacity detected for $NAME.</p>"
+    fi
+
+    if [ "$GETconfirm" != "2" ]
+    then
+        if [ "$GETconfirm" != "1" ]
+        then
+            _yesno "<p>Are you sure you want to format $NAME?</p><p><b>This will delete all your data!</b></p>" "action=format&amp;target=$GETtarget&amp;confirm=1" ""
+        else
+            _yesno "<p>Are you REALLY sure you want to format $NAME?</p><p><b>THIS WILL DELETE ALL YOUR DATA!</b></p>" "action=format&amp;target=$GETtarget&amp;confirm=2" ""
+        fi
+    else
+        _chunk "<p>Formatting $NAME... please wait.</p>"
+
+        sleep 1
+
+        _chunk "`printf "%4096s" " "`"
+
+        sleep 5
+
+        umount "$MNT" >& /dev/null
+        umount "$TARGET" >& /dev/null
+
+        grep "$TARGET" /proc/mounts >& /dev/null && _die "Could not umount $NAME." || _chunk "<p>Umounted $NAME.</p>"
+
+        if [ "$GETtarget" == "ext" ]
+        then
+            # SD Card requires repartitioning
+            dd if=/dev/zero of="$DEV_EXT" bs=1M count=4 >& /dev/null || _die "Could not partition $NAME."
+            (echo o; echo w;) | fdisk -S 32 -H 64 "$DEV_EXT" >& /dev/null || _die "Could not partition $NAME."
+            (echo o; echo n; echo p; echo 1; echo 2; echo; echo t; echo b; echo w;) | fdisk -S 32 -H 64 "$DEV_EXT" >& /dev/null || _die "Could not partition $NAME."
+            _chunk "<p>Partitioned $NAME.</p>"
+            sleep 1
+        fi
+
+        mkfs.vfat "$TARGET" && _chunk "<p>Formatted $NAME.</p>" || _die "Could not format $NAME."
+
+        mount -t vfat -o rw,relatime,fmask=0022,dmask=0022,codepage=949,iocharset=utf8,shortname=mixed,errors=remount-ro "$TARGET" "$MNT" \
+            && _chunk "<p>Mounted $NAME.</p>" || _die "Could not mount $NAME."
+
+        _chunk "<p>Done.</p>"
+    fi
+
+    sync
+}
+
+_view_reboot()
+{
+    _chunk "<p>Rebooting...</p>"
+    sync
+    sleep 5
+    reboot
+}
+
+# --- Main: ---
+
+_parse GET "$QUERY_STRING"
+read POST_STRING
+_parse POST "$POST_STRING"
+_header
+_view
+_footer
+
+# --- End of file. ---
