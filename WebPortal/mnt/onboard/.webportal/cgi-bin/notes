@@ -1,0 +1,332 @@
+#!/bin/busybox sh
+
+# --- Constants: ---
+
+MOUNTPOINT="/mnt/SDFAT"
+NOTES="$MOUNTPOINT"/"notes"
+SEPARATOR="----------"
+
+# --- Helpers: ---
+
+# htmlspecialchars
+_htmlspecialchars()
+{
+    value="`echo -n "$2" | sed -r -e 's@&@\&amp;@g' -e 's@[""]@\&quot;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g'`"
+    eval "$1"'="$value"'
+}
+
+# urlencode
+_urlencode()
+{
+    value="`echo -n "$2" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g'`"
+    eval "$1"'="$value"'
+}
+
+# parse a=b&c=d data
+_parse()
+{
+    PREFIX=$1
+    DATA=$2
+
+    while [ "$DATA" != "" ]
+    do
+        FIELD="`echo "$DATA" | cut -d '&' -f 1`"
+        DATA="${DATA:$((${#FIELD}+1))}"
+
+        key="`echo "$FIELD" | cut -d '=' -f 1 | sed -r -e s@[^a-zA-Z0-9_]@_@g`"
+        value="`echo "$FIELD" | cut -s -d '=' -f 2-'`"
+
+        if [ "$key" != "" ]
+        then
+            eval "$PREFIX""$key"'="`httpd -d "$value"`"'
+        fi
+    done
+}
+
+# print header
+_header()
+{
+    echo -n -e 'HTTP/1.0 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n'
+    echo '<html><head><style type="text/css">'
+
+    echo 'input, textarea, select {
+border: 1px solid #555;
+padding: 0.5em;
+font-size: 15px;
+line-height: 1.2em;
+width: 95%;
+background: #fff;
+background: -webkit-gradient(linear, left top, left bottom, from(#fff), to(#ccc));
+-webkit-appearance: none;
+-webkit-box-shadow: 1px 1px 1px #fff;
+-webkit-border-radius: 0.5em;
+}'
+
+    echo '</style></head><body>'
+    echo '<h1>Notes</h1>'
+}
+
+# print footer
+_footer()
+{
+    echo '<hr>'
+
+    # extra links
+    query="$1"
+    shift
+    text="$1"
+    shift
+
+    while [ "$text" != "" ]
+    do
+        echo '<a href="?'$query'">'$text'</a> | '
+        query="$1"
+        shift
+        text="$1"
+        shift
+    done
+
+    # standard footer
+    echo '<a href="?">Back to Notes</a>'
+
+    # # optional debug:
+    # echo '<pre>'
+    # set | sed -e 's@&@&amp;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g'
+    # echo '</pre>'
+
+    echo '</body></html>'
+    exit
+}
+
+# print error message
+# argument: msg
+_die()
+{
+    echo '<p>' "$1" '</p>'
+    _footer
+    exit
+}
+
+# print yesno dialog
+# argument: question yesquery noquery
+_yesno()
+{
+    echo '<p>' $1 '</p>'
+    #echo '<a href="?'$2'">Yes</a> <a href="?'$3'">No</a>'
+    _footer "$2" Yes "$3" No
+    exit
+}
+
+# check requirements
+_check()
+{
+    if ! grep -q "$MOUNTPOINT" /proc/mounts
+    then
+        _die "SD card could not be found."
+    fi
+
+    if [ ! -d "$NOTES" ]
+    then
+        if [ "$GETcheck" == "mkdir" ]
+        then
+            mkdir "$NOTES" \
+                && _die "The notes folder was successfully created." \
+                || _die "The notes folder could not be created."
+        fi
+
+        _yesno "The notes folder does not exist. Create it now?" "check=mkdir" ""
+    fi
+}
+
+# --- Views: ---
+
+_view()
+{
+    case "$GETaction" in
+        "")
+            _view_list
+            ;;
+        "show")
+            _view_show
+            ;;
+        "edit")
+            _view_edit
+            ;;
+        "delete")
+            _view_delete
+            ;;
+        "post")
+            _view_post
+            ;;
+        *)
+            _die "Unknown action: $GETaction"
+            ;;
+    esac
+}
+
+_view_list()
+{
+    echo '<ul>'
+
+    for note in $NOTES/*.txt
+    do
+        if [ ! -f "$note" ]
+        then
+            continue
+        fi
+
+        name="`basename "$note"`"
+        _urlencode fileurl "$name"
+        _htmlspecialchars filename "$name"
+
+        echo '<li><a href="?action=show&file='"$fileurl"'">'"$filename"'</a></li>'
+    done
+
+    echo '</ul>'
+
+    _footer "action=edit" "Create a new Note"
+}
+
+_view_show()
+{
+    _urlencode fileurl "$GETfile"
+    _htmlspecialchars filename "$GETfile"
+
+    if [ ! -f "$NOTES"/"$GETfile" ]
+    then
+        _die "The selected Note $filename does not exist."
+    fi
+
+    contents="`cat "$NOTES"/"$GETfile"`"
+
+    if [ "$contents" == "" ]
+    then
+        _die "The selected Note $filename is empty."
+    fi
+
+    _htmlspecialchars contents "$contents"
+
+    contents="`echo "$contents" | sed -r -e 's@$@<br>@'`"
+
+    echo "$contents"
+
+    _footer "action=edit&amp;file=$fileurl" "Edit" "action=delete&amp;file=$fileurl" "Delete"
+}
+
+_view_edit()
+{
+    if [ -f "$NOTES"/"$GETfile" ]
+    then
+        i=0
+        text=""
+        while read LINE
+        do
+            _htmlspecialchars LINE "$LINE"
+
+            i=$(($i+1))
+
+            case "$i" in
+                1)
+                    title="$LINE"
+                    ;;
+                2)
+                    if [ "${LINE:0:${#SEPARATOR}}" != "$SEPARATOR" ]
+                    then
+                        # only true if someone edited the file...
+                        text="$LINE"
+                    fi
+                    ;;
+                *)
+                    text="$text""$LINE"
+                    ;;
+            esac
+        done < "$NOTES"/"$GETfile"
+    fi
+
+    _urlencode fileurl "$GETfile"
+
+    echo '<form method="post" action="?action=post&amp;file='"$fileurl"'">'
+    echo '<p style="margin: 1px;"><label for="title">Title:</label></p>'
+    echo '<p style="margin: 1px;"><input id="title" name="title" type="text" value="'"$title"'" /></p>'
+    echo '<p style="margin: 1px;"><label for="text">Text:</label></p>'
+    echo '<p style="margin: 1px;"><textarea id="text" name="text" style="height: 25em;">'"$text"'</textarea></p>'
+    echo '<p style="margin: 1px;"><input id="save" name="save" class="button_text" type="submit" value="Save"></p>'
+}
+
+_view_delete()
+{
+    _urlencode fileurl "$GETfile"
+    _htmlspecialchars filename "$GETfile"
+
+    if [ "$GETconfirm" != "1" ]
+    then
+        _yesno "<p>Are you sure you want to delete $filename?</p>" "action=delete&amp;file=$fileurl&amp;confirm=1" "action=show&amp;file=$fileurl"
+    fi
+
+    rm "$NOTES"/"$GETfile" \
+        && _die "Note $filename successfully deleted." \
+        || _die "Could not delete $filename."
+}
+
+_view_post()
+{
+   if [ "$POSTsave" == 'Save' ]
+    then
+        if [ "$POSTtitle" != "" ]
+        then
+            filename="${POSTtitle:0:80}".txt
+            filename="`echo "$filename" | sed -r -e 's@/@_@g'`"
+
+            if ! mkdir "$NOTES"/"$filename".dir
+            then
+                filename="`echo "$filename" | sed -r -e 's@[^-a-zA-Z0-9 _.]@_@g'`"
+
+                if ! mkdir "$NOTES"/"$filename".dir
+                then
+                    filename="."
+                fi
+            fi
+
+            rmdir "$NOTES"/"$filename".dir
+
+            if [ -e "$NOTES"/"$filename" -a "$filename" != "$GETfile" ]
+            then
+                echo '<p>Note already exists. Choosing a random filename.</p>'
+                filename="`mktemp "$NOTES"/"noteXXXXXX"`"
+                filename="`basename "$filename"`"
+                rm "$NOTES"/"$filename"
+                filename="$filename".txt
+            fi
+
+            if [ "$NOTES"/"$filename" != "" ]
+            then
+                echo "$POSTtitle" > "$NOTES"/"$filename" \
+                    && echo "$SEPARATOR" >> "$NOTES"/"$filename" \
+                    && echo "$POSTtext" >> "$NOTES"/"$filename" \
+                    || _die "Could not write Note. Full disk?"
+
+                echo '<p>Successfully saved to "'"$filename"'".</p>'
+
+                if [ -f "$NOTES"/"$GETfile" -a "$filename" != "$GETfile" ]
+                then
+                    # file was renamed
+                    rm "$NOTES"/"$GETfile"
+                fi
+            fi
+        else
+            _die 'Please specify a title.'
+        fi
+    fi
+}
+
+# --- Main: ---
+
+_parse GET "$QUERY_STRING"
+read POST_STRING
+_parse POST "$POST_STRING"
+_header
+_check
+_view
+_footer
+
+# --- End of file. ---
