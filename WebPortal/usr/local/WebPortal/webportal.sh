@@ -24,7 +24,7 @@ then
     mv uninstall uninstalled-$(date +%Y%m%d-%H%M)
     rm -f /etc/udev/rules.d/webportal.rules
     rm -rf /usr/local/WebPortal
-    sed -r -e '@^127\.0\.0\.42\s.*@d' -i /etc/hosts
+    sed -r -e '/^127\.0\.0\.42\s.*/d' -i /etc/hosts
     exit
 fi
 
@@ -32,7 +32,7 @@ fi
 if [ -e /mnt/onboard/.webportal/vhosts.conf ]
 then
     cp /etc/hosts /tmp/webportal_hosts
-    sed -r -e '@^127\.0\.0\.42\s.*@d' -i /tmp/webportal_hosts
+    sed -r -e '/^127\.0\.0\.42\s.*/d' -i /tmp/webportal_hosts
     echo 127.0.0.42 $(sed -e 's@#.*@@' /mnt/onboard/.webportal/vhosts.conf | sort) >> /tmp/webportal_hosts
     cmp /etc/hosts /tmp/webportal_hosts || cp /tmp/webportal_hosts /etc/hosts
 fi
