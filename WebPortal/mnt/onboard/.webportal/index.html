@@ -1,1 +1,40 @@
-Hello World!
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+<head>
+  <title>iriver Story HD Web Portal Mod</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <script type="text/javascript">
+<!--
+  function showOriginalLocation()
+  {
+    var result = new RegExp("^[^?]*\\?(.*)").exec(window.location.search);
+    var original = result && unescape(result[1]) || "";
+    var link = document.getElementById("OriginalLink");
+    link.href = original;
+  }
+  // -->
+  </script>
+</head>
+
+<body style="font-size: 2em; -webkit-text-size-adjust: none; text-align: center; align: center;" onload="showOriginalLocation();">
+  <h1>Web Portal</h1>
+
+  <h2><a style="text-decoration: none;" href="#" id="OriginalLink" name="OriginalLink"><img src="app/gui/main_list/browse_s.png" style="background: url(app/gui/main_list/browse_n.png); margin: 5px; padding: 0px; vertical-align: middle;">Continue &rarr;</a></h2>
+
+  <p><a style="text-decoration: none;" href="http://www.google.com">Google Search</a></p>
+
+  <p><a style="text-decoration: none;" href="http://en.m.wikipedia.org">Wikipedia</a></p>
+
+  <p><a style="text-decoration: none;" href="http://pda.leo.org">LEO Dictionary</a></p>
+
+  <p><a style="text-decoration: none;" href="http://www.mobileread.mobi">Mobileread</a></p>
+
+  <p><a style="text-decoration: none;" href="http://www.e-reader-forum.de">E-Reader-Forum</a></p>
+
+  <form name="urlform" id="urlform" action="#">
+    <input type="text" size="60" name="url" value="http://" style="font-size: 20px; border: 6px ridge;"><br>
+    <input type="button" value="OK!" onclick="window.location=document.urlform.url.value;">
+  </form>
+</body>
+</html>
