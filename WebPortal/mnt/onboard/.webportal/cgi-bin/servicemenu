@@ -3,19 +3,19 @@
 # --- Constants: ---
 
 DEV_INT=/dev/mmcblk0
-DEV_INTFAT=/dev/mmcblk0p1
-MNT_INTFAT=/mnt/MOVIFAT
+DEV_INTFAT=/dev/mmcblk0p3
+MNT_INTFAT=/mnt/onboard
 
 DEV_EXT=/dev/mmcblk1
 DEV_EXTFAT=/dev/mmcblk1p1
-MNT_EXTFAT=/mnt/SDFAT
+MNT_EXTFAT=/mnt/sd
 
 SIZE_INT=/sys/block/mmcblk0/size
-SIZE_INTFAT=/sys/block/mmcblk0/mmcblk0p1/size
+SIZE_INTFAT=/sys/block/mmcblk0/mmcblk0p3/size
 SIZE_EXT=/sys/block/mmcblk1/size
 SIZE_EXTFAT=/sys/block/mmcblk1/mmcblk1p1/size
 
-TMPFILE=/dev/shm/servicemenu
+TMPFILE=/tmp/servicemenu
 
 # --- Helpers: ---
 
@@ -205,10 +205,10 @@ _view_list()
     _chunk '<li><a href="?action=bookdb">Delete Book DB</a></li>'
     _chunk '</ul>'
 
-    _chunk '<ul>'
-    _chunk '<li><a href="?action=format&amp;target=int">Format Internal Memory</a></li>'
-    _chunk '<li><a href="?action=format&amp;target=ext">Format External Memory (SDCARD)</a></li>'
-    _chunk '</ul>'
+#    _chunk '<ul>'
+#    _chunk '<li><a href="?action=format&amp;target=int">Format Internal Memory</a></li>'
+#    _chunk '<li><a href="?action=format&amp;target=ext">Format External Memory (SDCARD)</a></li>'
+#    _chunk '</ul>'
 
     _chunk '<ul>'
     _chunk '<li><a href="?action=reboot">Reboot</a></li>'
@@ -285,7 +285,7 @@ _view_bookdb()
         _yesno "<p>Are you sure you want to delete the Book DB?</p><p><b>This will erase your reading progress for all books.</b></p>" "action=bookdb&amp;confirm=1" ""
     fi
 
-    rm /mnt/MOVIFAT/system/bookDB.* >& /dev/null
+    rm /mnt/onboard/.kobo/KoboReader.sqlite >& /dev/null
     sync
 
     _chunk "<p>Book DB deleted.</p>"
