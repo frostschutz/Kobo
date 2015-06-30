@@ -2,7 +2,7 @@
 
 # --- Constants: ---
 
-MOUNTPOINT="/mnt/SDFAT"
+MOUNTPOINT="/mnt/onboard"
 NOTES="$MOUNTPOINT"/"notes"
 SEPARATOR="----------"
 
@@ -168,7 +168,7 @@ _view_list()
 {
     echo '<ul>'
 
-    for note in $NOTES/*.txt
+    for note in "$NOTES"/*.txt
     do
         if [ ! -f "$note" ]
         then
