@@ -29,6 +29,11 @@ http://www.mobileread.com/forums/showthread.php?t=255238
 
 Enable telnet and ftp servers. Survives most firmware updates.
 
+- WebPortal - 
+
+A local web server running on the Kobo and the things you can do with it.
+Also includes a hack that allows intranet wifi usage (without WWW access).
+
 - ext234vfat -
 
 Add support for ext2/3/4 filesystems for USB and SD storage.
