@@ -42,4 +42,4 @@ ifconfig lo 127.0.0.1
 ip addr add 127.0.0.42 dev lo
 
 # start webserver
-httpd -f -p 127.0.0.42:80 -h /mnt/onboard/.webportal
+httpd -f -h /mnt/onboard/.webportal
