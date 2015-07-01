@@ -29,15 +29,13 @@ _chunk()
 # htmlspecialchars
 _htmlspecialchars()
 {
-    value="`echo -n "$2" | sed -r -e 's@&@\&amp;@g' -e 's@[""]@\&quot;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g'`"
-    eval "$1"'="$value"'
+    echo -n "$1" | sed -r -e 's@&@\&amp;@g' -e 's@[""]@\&quot;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g'
 }
 
 # urlencode
 _urlencode()
 {
-    value="`echo -n "$2" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g'`"
-    eval "$1"'="$value"'
+    echo -n "$1" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g'
 }
 
 # parse a=b&c=d data
@@ -85,7 +83,8 @@ background: -webkit-gradient(linear, left top, left bottom, from(#fff), to(#ccc)
 -webkit-appearance: none;
 -webkit-box-shadow: 1px 1px 1px #fff;
 -webkit-border-radius: 0.5em;
-}'
+}
+'
 
     _chunk '
 #progress {
@@ -176,6 +175,9 @@ _view()
         "")
             _view_list
             ;;
+        "info")
+            _view_info
+            ;;
         "check")
             _view_check
             ;;
@@ -197,6 +199,10 @@ _view()
 _view_list()
 {
     _chunk '<ul>'
+    _chunk '<li><a href="?action=info">Info</a></li>'
+    _chunk '</ul>'
+
+    _chunk '<ul>'
     _chunk '<li><a href="?action=check&amp;target=int">Check Internal Memory</a></li>'
     _chunk '<li><a href="?action=check&amp;target=ext">Check External Memory (SDCARD)</a></li>'
     _chunk '</ul>'
@@ -213,6 +219,22 @@ _view_list()
     _chunk '<ul>'
     _chunk '<li><a href="?action=reboot">Reboot</a></li>'
     _chunk '</ul>'
+}
+
+_view_info()
+{
+    _chunk '<h4>CPU</h4>'
+    _chunk "<pre>$(_htmlspecialchars "$(cat /proc/cpuinfo)")</pre>"
+
+    _chunk '<h4>RAM</h4>'
+    _chunk "<pre>$(_htmlspecialchars "$(free -m)")</pre>"
+
+    _chunk '<h4>HDD</h4>'
+    _chunk "<pre>$(_htmlspecialchars "$(df -h)")</pre>"
+
+    _chunk '<h4>WIFI</h4>'
+    _chunk "<pre>$(_htmlspecialchars "$(iwconfig)")</pre>"
+    _chunk "<pre>$(_htmlspecialchars "$(ifconfig)")</pre>"
 }
 
 _view_check()
