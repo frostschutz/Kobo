@@ -37,12 +37,13 @@ int main(int argc, char *argv[])
     // 180° rotation hack
     // FIXME: remember result for subsequent calls to avoid race condition
     rotate = screen.rotate;
+    screen.rotate ^= 0x2;
     ioctl(fb0, FBIOPUT_VSCREENINFO, &screen);
     if(rotate != screen.rotate)
     {
-        rotate = screen.rotate;
-        ioctl(fb0, FBIOPUT_VSCREENINFO, &screen);
         screen.rotate = rotate;
+        ioctl(fb0, FBIOPUT_VSCREENINFO, &screen);
+        screen.rotate ^= 0x2;
     }
 
     screensize = screen.xres_virtual * screen.yres_virtual * 2;
@@ -99,7 +100,7 @@ int main(int argc, char *argv[])
 
     switch(screen.rotate)
     {
-        case 3:
+        case 1:
             // fb0map[0] is the top left corner, fb0map[0..xres_virtual*2] the top row
             for(x=xmax; x--;)
             {
@@ -111,7 +112,7 @@ int main(int argc, char *argv[])
             }
 
             break;
-        case 1:
+        case 3:
             // fb0map[0] is the bottom right corner, fb0map[0..xres_virtual*2] the bottom row
             for(x=xmax; x--;)
             {
@@ -123,7 +124,7 @@ int main(int argc, char *argv[])
             }
 
             break;
-        case 0:
+        case 2:
             // fb0map[0] is the top right corner, fb0map[0..xres_virtual*2] the right column
             for(x=xmax; x--;)
             {
@@ -134,7 +135,7 @@ int main(int argc, char *argv[])
                 }
             }
             break;
-        case 4:
+        case 0:
             // fb0map[0] is the bottom left corner, fb0map[0..xres_virtual*2] the left column
             for(x=xmax; x--;)
             {
