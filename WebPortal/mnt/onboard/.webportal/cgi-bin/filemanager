@@ -1,0 +1,145 @@
+#!/bin/sh
+
+# --- Helpers: ---
+
+_htmlspecialchars() {
+    echo -n "$1" | sed -r -e 's@&@\&amp;@g' -e 's@[""]@\&quot;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g'
+}
+
+_urlencode() {
+    echo -n "$1" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g'
+}
+
+_parse() {
+    local value
+    value='&'"$2"'&'
+    value="${value##*&$1=}"
+    value="${value%%&*}"
+    [ "$value" != "" ] && httpd -d "$value"
+}
+
+_get() {
+    _parse "$1" "$QUERY_STRING"
+}
+
+_post() {
+    _parse "$1" "$POST_STRING"
+}
+
+_header() {
+    echo -n -e 'HTTP/1.0 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n'
+    echo << 'EOF'
+<html>
+<head>
+  <style type="text/css">
+table {
+    width: 100%;
+    background-color: #fff5ee;
+    border-width: 1px;
+    border-spacing: 2px;
+    border-style: solid;
+    border-color: black;
+    border-collapse: collapse;
+}
+th {
+    border-width: 1px;
+    padding: 1px;
+    border-style: solid;
+    border-color: black;
+}
+td {
+    border-width: 0px 1px 0px 1px;
+    padding: 1px;
+    border-style: solid;
+    border-color: black;
+    white-space: nowrap;
+}
+tr.hdr {
+    background-color: #eee5de;
+}
+tr.o {
+    background-color: #ffffff;
+}
+tr.foot {
+    background-color: #eee5de;
+}
+th.cnt {
+    text-align: left;
+}
+th.sz {
+    text-align: right;
+}
+th.dt {
+    text-align: right;
+}
+td.sz {
+    text-align: right;
+}
+td.dt {
+    text-align: right;
+}
+col.nm {
+    width: 98%;
+}
+col.sz {
+    width: 1%;
+}
+col.dt {
+    width: 1%;
+}
+  </style>
+</head>
+<body>
+<h1>File Manager</h1>
+EOF
+}
+
+_footer() {
+    echo '<hr>'
+
+    # extra links
+    query="$1"
+    text="$2"
+
+    while shift 2
+    do
+        echo "<a href=\"?$query\">$text</a> | "
+        query="$1"
+        text="$2"
+    done
+
+    echo '<a href="?">Back to File Manager</a>'
+    echo '</body></html>'
+    exit
+}
+
+_die() {
+    echo "<p> $1 </p>"
+    _footer
+    exit
+}
+
+_yesno() {
+    echo "<p> $1 </p>"
+    _footer "$2" Yes "$3" No
+    exit
+}
+
+# --- Views: ---
+
+_view() {
+    case $(_get action) in
+        "")
+            _view_list
+            ;;
+}
+
+# --- Main: ---
+
+read POST_STRING
+
+_header
+_view
+_footer
+
+# --- End of file. ---
