@@ -11,15 +11,13 @@ SEPARATOR="----------"
 # htmlspecialchars
 _htmlspecialchars()
 {
-    value="`echo -n "$2" | sed -r -e 's@&@\&amp;@g' -e 's@[""]@\&quot;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g'`"
-    eval "$1"'="$value"'
+    echo -n "$1" | sed -r -e 's@&@\&amp;@g' -e 's@[""]@\&quot;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g'
 }
 
 # urlencode
 _urlencode()
 {
-    value="`echo -n "$2" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g'`"
-    eval "$1"'="$value"'
+    echo -n "$1" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g'
 }
 
 # parse a=b&c=d data
@@ -176,8 +174,8 @@ _view_list()
         fi
 
         name="`basename "$note"`"
-        _urlencode fileurl "$name"
-        _htmlspecialchars filename "$name"
+        fileurl=$(_urlencode "$name")
+        filename=$(_htmlspecialchars "$name")
 
         echo '<li><a href="?action=show&file='"$fileurl"'">'"$filename"'</a></li>'
     done
@@ -189,8 +187,8 @@ _view_list()
 
 _view_show()
 {
-    _urlencode fileurl "$GETfile"
-    _htmlspecialchars filename "$GETfile"
+    fileurl=$(_urlencode "$GETfile")
+    filename=$(_htmlspecialchars "$GETfile")
 
     if [ ! -f "$NOTES"/"$GETfile" ]
     then
@@ -204,7 +202,7 @@ _view_show()
         _die "The selected Note $filename is empty."
     fi
 
-    _htmlspecialchars contents "$contents"
+    contents=$(_htmlspecialchars "$contents")
 
     contents="`echo "$contents" | sed -r -e 's@$@<br>@'`"
 
@@ -221,7 +219,7 @@ _view_edit()
         text=""
         while read LINE
         do
-            _htmlspecialchars LINE "$LINE"
+            LINE=$(_htmlspecialchars "$LINE")
 
             i=$(($i+1))
 
@@ -243,7 +241,7 @@ _view_edit()
         done < "$NOTES"/"$GETfile"
     fi
 
-    _urlencode fileurl "$GETfile"
+    fileurl=$(_urlencode "$GETfile")
 
     echo '<form method="post" action="?action=post&amp;file='"$fileurl"'">'
     echo '<p style="margin: 1px;"><label for="title">Title:</label></p>'
@@ -255,8 +253,8 @@ _view_edit()
 
 _view_delete()
 {
-    _urlencode fileurl "$GETfile"
-    _htmlspecialchars filename "$GETfile"
+    fileurl=$(_urlencode "$GETfile")
+    filename=$(_htmlspecialchars "$GETfile")
 
     if [ "$GETconfirm" != "1" ]
     then
