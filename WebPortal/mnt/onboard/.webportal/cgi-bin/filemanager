@@ -3,11 +3,11 @@
 # --- Helpers: ---
 
 _htmlspecialchars() {
-    echo -n "$1" | sed -r -e 's@&@\&amp;@g' -e 's@[""]@\&quot;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g'
+    echo -n "$1" | sed -r -e 's@&@\&amp;@g' -e 's@[""]@\&quot;@g' -e 's@<@\&lt;@g' -e 's@>@\&gt;@g' -e 's@ @\&nbsp;@g'
 }
 
 _urlencode() {
-    echo -n "$1" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g'
+    echo -n "$1" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g' -e 's@%2[fF]@/@g'
 }
 
 _parse() {
@@ -28,7 +28,7 @@ _post() {
 
 _header() {
     echo -n -e 'HTTP/1.0 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n'
-    echo << 'EOF'
+    cat << 'EOF'
 <html>
 <head>
   <style type="text/css">
@@ -98,14 +98,12 @@ _footer() {
     echo '<hr>'
 
     # extra links
-    query="$1"
-    text="$2"
-
-    while shift 2
+    while [ ${#@} -ge 2 ]
     do
-        echo "<a href=\"?$query\">$text</a> | "
         query="$1"
         text="$2"
+        echo "<a href=\"?$query\">$text</a> | "
+        shift 2 # busybox
     done
 
     echo '<a href="?">Back to File Manager</a>'
@@ -130,13 +128,44 @@ _yesno() {
 _view() {
     case $(_get action) in
         "")
-            _view_list
+            _view_index
             ;;
+    esac
+}
+
+_view_index() {
+    cd "$TARGET" || _die "Not found: $TARGET"
+
+    echo "<h2>Index of $TARGET</h2>"
+
+    echo '<ul>'
+    for item in .* *
+    do
+        realitem=$(realpath "$item") || continue
+        urlitem=$(_urlencode "$realitem")
+        htmlitem=$(_htmlspecialchars "$item")
+        if [ -d "$item" ]
+        then
+            echo "<li>DIR: <a href=\"?${urlitem}\">${htmlitem}</a></li>"
+        elif [ -f "$item" ]
+        then
+            echo "<li>FILE: ${htmlitem}</li>"
+        else
+             echo "<li>OTHER: ${htmlitem}</li>"
+        fi
+    done
+    echo '</ul>'
+
 }
 
 # --- Main: ---
 
-read POST_STRING
+TARGET=/mnt/onboard
+
+if [ "${QUERY_STRING::1}" == "/" ]
+then
+    TARGET=$(httpd -d "${QUERY_STRING%%&*}")
+fi
 
 _header
 _view
