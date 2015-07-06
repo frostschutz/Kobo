@@ -90,6 +90,22 @@ col.sz {
 col.dt {
     width: 1%;
 }
+a.d {
+   padding-left: 20px;
+   background: url(data:image/gif;base64,R0lGODlhEgARAPUAAAAAAAcHBw8PDxcXFx8fHycnJy8vLzc3Nz8/P0dHR09PT1dXV19fX2dnZ29vb3d3d39/f4eHh4+Pj5eXl5+fn6enp6+vr7e3t7+/v8fHx8/Pz9fX19/f3+fn5+/v7/f39wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAACAALAAAAAASABEAAAanQNBgKBgOQMikEpQ4GJ6Hg2K5RBCNBAQ1eSAUBQGBuEAoFJ4JpEEcACQ+8LjcAPK2ARiPp8PvcP4eXhUTFIR/GxsaiRoZil5+GxyJjRkZGJYZFxkDARqXGBgXoRcWFhQUEoScoaWlgxISEbGxEwIApoUSELu8vRG2ExEPEMPFxMcPEW0OzM3Ozw4AAA0ODdbV2NbU1tIM3t/g4QsCQkZY5wQDBVvsSkEAOw==) transparent no-repeat center left;
+}
+a.f {
+    padding-left: 20px;
+    background: url(data:image/gif;base64,R0lGODlhDgASAOMJAPf39wAAAO/v7+fn57+/vw8PDy8vL19fX8/Pz////////////////////////////yH5BAEKAA8ALAAAAAAOABIAAAQ98MlJa7gY0yCA/8Q1cR9YGIFElgBRHOizlkN2dWyJ3Hkp8D1Pbdb7EXNDXNCo7CWDHiYU8IT+ZLZsZUuJAAA7) transparent no-repeat center left;
+}
+a.epub {
+    padding-left: 20px;
+    background: url(data:image/gif;base64,R0lGODlhEgASAIABAIW5Fv///yH5BAEKAAEALAAAAAASABIAAAItjI+pCA2rnINHSnpDTlu3OFUfFxql5o2mmnbs1TFl3JLvKY50blHrDmL5PJACADs=) transparent no-repeat center left;
+}
+a.pdf {
+    padding-left: 20px;
+    background: url(data:image/gif;base64,R0lGODlhEgASAMIGAMINDeIXGMhIR85ycNihnt/d2P///////yH5BAEKAAcALAAAAAASABIAAANgeLG8UhASoBojhYw4gQ0ANoTR6DVbIQBApLLMA62sSwtpxu52LdG7VoSmAQZls6ByhyyYTEtAswMZLU6BZoE1wEwsWlh21tCuGCRBzKVrpB3srYXk0ao+rYmdUCk7tXwJADs=) transparent no-repeat center left;
+}
   </style>
 </head>
 <body>
@@ -146,8 +162,8 @@ _view_index() {
     echo "<h2>Index of ${htmltarget}</h2>"
 
     echo '<table>'
-    echo '<col class=nm /><col class=sz /><col class=dt />'
-    echo '<tr class=hdr><th class=cnt>Name</th><th class=sz>Size</th><th class=dt>Last modified</th></tr>'
+    echo '<col class="nm" /><col class="sz" /><col class="dt" />'
+    echo '<tr class="hdr"><th class="cnt">Name</th><th class="sz">Size</th><th class="dt">Last modified</th></tr>'
 
     odd="o"
     even="e"
@@ -159,20 +175,26 @@ _view_index() {
         urlitem=$(_urlencode "$realitem")
         htmlitem=$(_htmlspecialchars "$item")
 
-        if [ -d "$item" ]
+        set -- $(stat -c "%A %s %y %F" "$item")
+        pm=$1
+        sz=$2
+        dt="$3 $4"
+        tp="$5$6"
+
+        if [ "$tp" == "directory" ]
         then
-            nm="<a href=\"?${urlitem}\">${htmlitem}</a>"
-        elif [ -f "$item" ]
+            nm="<a class=\"d\" href=\"?${urlitem}\">${htmlitem}</a>"
+        elif [ "$tp" == "regularfile" ]
         then
-            nm="${htmlitem}"
+            nm="<a class=\"f ${htmlitem##*.}\" href=\"?${urlitem}\">${htmlitem}</a>"
+        elif [ "$tp" == "symboliclink" ]
+        then
+            link=$(readlink "$item")
+            htmllink=$(_htmlspecialchars "$link")
+            nm="&rarr; ${htmlitem} &rarr; <a href=\"?${urlitem}\">${htmllink}</a>"
         else
             nm="${htmlitem}"
         fi
-
-        echo '</td>'
-
-        sz=$(stat -c %s "$item")
-        dt=$(stat -c %y "$item")
 
         echo "<tr class=\"${odd}\"><td class=\"nm\">${nm}</td><td class=\"sz\">${sz}</td><td class=\"dt\">${dt:0:19}</td></tr>"
 
