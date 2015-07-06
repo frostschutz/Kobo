@@ -60,6 +60,9 @@ tr.hdr {
 tr.o {
     background-color: #ffffff;
 }
+tr.e {
+    background-color: #eeeeee;
+}
 tr.foot {
     background-color: #eee5de;
 }
@@ -134,41 +137,64 @@ _view() {
 }
 
 _view_index() {
+    _header
+
     cd "$TARGET" || _die "Not found: $TARGET"
 
-    echo "<h2>Index of $TARGET</h2>"
+    htmltarget=$(_htmlspecialchars "$TARGET")
 
-    echo '<ul>'
+    echo "<h2>Index of ${htmltarget}</h2>"
+
+    echo '<table>'
+    echo '<col class=nm /><col class=sz /><col class=dt />'
+    echo '<tr class=hdr><th class=cnt>Name</th><th class=sz>Size</th><th class=dt>Last modified</th></tr>'
+
+    odd="o"
+    even="e"
+    oddeven="o"
+
     for item in .* *
     do
         realitem=$(realpath "$item") || continue
         urlitem=$(_urlencode "$realitem")
         htmlitem=$(_htmlspecialchars "$item")
+
         if [ -d "$item" ]
         then
-            echo "<li>DIR: <a href=\"?${urlitem}\">${htmlitem}</a></li>"
+            nm="<a href=\"?${urlitem}\">${htmlitem}</a>"
         elif [ -f "$item" ]
         then
-            echo "<li>FILE: ${htmlitem}</li>"
+            nm="${htmlitem}"
         else
-             echo "<li>OTHER: ${htmlitem}</li>"
+            nm="${htmlitem}"
         fi
-    done
-    echo '</ul>'
 
+        echo '</td>'
+
+        sz=$(stat -c %s "$item")
+        dt=$(stat -c %y "$item")
+
+        echo "<tr class=\"${odd}\"><td class=\"nm\">${nm}</td><td class=\"sz\">${sz}</td><td class=\"dt\">${dt:0:19}</td></tr>"
+
+        oddeven=$odd
+        odd=$even
+        even=$oddeven
+    done
+
+    echo '</table>'
+
+    _footer
 }
 
 # --- Main: ---
 
-TARGET=/mnt/onboard
+TARGET=$(httpd -d "${QUERY_STRING%%&*}")
 
-if [ "${QUERY_STRING::1}" == "/" ]
+if [ "${TARGET::1}" != "/" ]
 then
-    TARGET=$(httpd -d "${QUERY_STRING%%&*}")
+    TARGET="/mnt/onboard"
 fi
 
-_header
 _view
-_footer
 
 # --- End of file. ---
