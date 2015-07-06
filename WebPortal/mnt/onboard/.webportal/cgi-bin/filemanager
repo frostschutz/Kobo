@@ -98,6 +98,14 @@ a.f {
     padding-left: 20px;
     background: url(data:image/gif;base64,R0lGODlhDgASAOMJAPf39wAAAO/v7+fn57+/vw8PDy8vL19fX8/Pz////////////////////////////yH5BAEKAA8ALAAAAAAOABIAAAQ98MlJa7gY0yCA/8Q1cR9YGIFElgBRHOizlkN2dWyJ3Hkp8D1Pbdb7EXNDXNCo7CWDHiYU8IT+ZLZsZUuJAAA7) transparent no-repeat center left;
 }
+a.b {
+    padding-left: 20px;
+    background: url(data:image/gif;base64,R0lGODlhEgASAIQQAAcKBR8gHiYoJi4wLTo7OUlLSFhaV2xua3d5doeJhpKUkaWnpL7AvdDSzt/h3u3v7P///////////////////////////////////////////////////////////////yH5BAEKABAALAAAAAASABIAAAWeYCEWBmOeynEsyziWzdkgotIWBE6eJ5Ini5yOAGPEGAccEEdo5nimQxPoHDQLRpl0QB14vQQo0otYfL2CwQGxXhsMhYPBGxDY63e7AL/P1/99gH8BdQ4Ph4iJDweEhASHhpEPkgmEAAEDkw6bDZsOnQ8JlwEAmYqnCKQAlw8Nrq+wDgirqwGfsLgOB7SrDgsMv8HARrsAxgC/YjwFxiEAOw==) transparent no-repeat center left;
+}
+a.x {
+    padding-left: 20px;
+    background: url(data:image/gif;base64,R0lGODlhEgASAOMIAAoQEiUqLjk8PCxVilZYV3yAga6wrMPGwf///////////////////////////////yH5BAEKAAgALAAAAAASABIAAAR8EEkAJKIh2C2L0VNAFJwVeMQmkqYgEYZRSYEwWsThCkaKCzaXxHAoHAwsRK4AJMwCh+gxJYgSAgAbiCAQHasHH6A22wAGRB+tbDkPCgR1aTKoDwK9Od3+PibNfBoARnmAfCZESG18A2x4U3t1bBJVSEJukzhwQheZGzYSEQA7) transparent no-repeat center left;
+}
 a.epub {
     padding-left: 20px;
     background: url(data:image/gif;base64,R0lGODlhEgASAIABAIW5Fv///yH5BAEKAAEALAAAAAASABIAAAItjI+pCA2rnINHSnpDTlu3OFUfFxql5o2mmnbs1TFl3JLvKY50blHrDmL5PJACADs=) transparent no-repeat center left;
@@ -147,15 +155,15 @@ _yesno() {
 _view() {
     case $(_get action) in
         "")
-            _view_index
+            cd "$TARGET" && _view_index || _view_download
             ;;
+        "tar")
+            _view_tar
     esac
 }
 
 _view_index() {
     _header
-
-    cd "$TARGET" || _die "Not found: $TARGET"
 
     htmltarget=$(_htmlspecialchars "$TARGET")
 
@@ -179,21 +187,29 @@ _view_index() {
         pm=$1
         sz=$2
         dt="$3 $4"
-        tp="$5$6"
+        tp="$5$6$7"
 
         if [ "$tp" == "directory" ]
         then
             nm="<a class=\"d\" href=\"?${urlitem}\">${htmlitem}</a>"
-        elif [ "$tp" == "regularfile" ]
+        elif [ "$tp" == "regularfile" -o "$tp" == "regularemptyfile" ]
         then
             nm="<a class=\"f ${htmlitem##*.}\" href=\"?${urlitem}\">${htmlitem}</a>"
         elif [ "$tp" == "symboliclink" ]
         then
             link=$(readlink "$item")
             htmllink=$(_htmlspecialchars "$link")
-            nm="&rarr; ${htmlitem} &rarr; <a href=\"?${urlitem}\">${htmllink}</a>"
+            if [ -d "$link"/ ]
+            then
+                nm="&rarr; ${htmlitem} &rarr; <a href=\"?${urlitem}\">${htmllink}</a>"
+            else
+                nm="&rArr; ${htmlitem} &rArr; ${htmllink}"
+            fi
+        elif [ "$tp" == "blockspecialfile" ]
+        then
+            nm="<a class=\"b\" href=\"?${urlitem}\">${htmlitem}</a>"
         else
-            nm="${htmlitem}"
+            nm="<a class=\"x\">${htmlitem}</a>"
         fi
 
         echo "<tr class=\"${odd}\"><td class=\"nm\">${nm}</td><td class=\"sz\">${sz}</td><td class=\"dt\">${dt:0:19}</td></tr>"
@@ -206,6 +222,24 @@ _view_index() {
     echo '</table>'
 
     _footer
+}
+
+_view_download() {
+    if [ ! -e "$TARGET" ]
+    then
+
+        _die "Not found: $TARGET"
+    fi
+
+    item=$(basename "$TARGET")
+    urlitem=$(_urlencode "$item")
+
+    echo -n -e 'HTTP/1.0 200 OK\r\n'
+    echo -n -e 'Content-Type: application/octet-stream\r\n'
+    echo -n -e "Content-Disposition: attachment; filename*=UTF-8''${urlitem}\r\n\r\n"
+    sync
+    cat "$TARGET"
+    exit
 }
 
 # --- Main: ---
