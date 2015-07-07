@@ -124,12 +124,14 @@ EOF
 _footer() {
     echo '<hr>'
 
+    urltarget=$(_urlencode "$TARGET")
+
     # extra links
     while [ ${#@} -ge 2 ]
     do
         query="$1"
         text="$2"
-        echo "<a href=\"?$query\">$text</a> | "
+        echo "<a href=\"?${urltarget}&${query}\">$text</a> | "
         shift 2 # busybox
     done
 
@@ -159,6 +161,7 @@ _view() {
             ;;
         "tar")
             _view_tar
+            ;;
     esac
 }
 
@@ -221,13 +224,13 @@ _view_index() {
 
     echo '</table>'
 
-    _footer
+    _footer "action=tar" "&#9660; TAR"
 }
 
 _view_download() {
     if [ ! -e "$TARGET" ]
     then
-
+        _header
         _die "Not found: $TARGET"
     fi
 
@@ -240,6 +243,24 @@ _view_download() {
     sync
     cat "$TARGET"
     exit
+}
+
+_view_tar() {
+    if [ ! -d "$TARGET"/ ]
+    then
+        _header
+        _die "Not a directory: $TARGET"
+    fi
+
+    item=$(basename "$TARGET")
+    urlitem=$(_urlencode FileManager-"$TARGET".tgz)
+
+    echo -n -e 'HTTP/1.0 200 OK\r\n'
+    echo -n -e 'Content-Type: application/octet-stream\r\n'
+    echo -n -e "Content-Disposition: attachment; filename*=UTF-8''${urlitem}\r\n\r\n"
+
+    # FIXME: does not include empty directories
+    find "$TARGET"/ -xdev -type f -o -type l | tar cz -T -
 }
 
 # --- Main: ---
