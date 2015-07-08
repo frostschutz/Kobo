@@ -7,7 +7,7 @@ _htmlspecialchars() {
 }
 
 _urlencode() {
-    echo -n "$1" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g' -e 's@%2[fF]@/@g'
+    echo -n "$1" | hexdump -v -e '/1 "%02x"' | sed -r -e 's@..@%&@g'
 }
 
 _parse() {
@@ -252,12 +252,11 @@ _view_tar() {
         _die "Not a directory: $TARGET"
     fi
 
-    item=$(basename "$TARGET")
-    urlitem=$(_urlencode FileManager-"$TARGET".tgz)
+    tarname=$(_urlencode FileManager-"$TARGET".tgz)
 
     echo -n -e 'HTTP/1.0 200 OK\r\n'
     echo -n -e 'Content-Type: application/octet-stream\r\n'
-    echo -n -e "Content-Disposition: attachment; filename*=UTF-8''${urlitem}\r\n\r\n"
+    echo -n -e "Content-Disposition: attachment; filename*=UTF-8''${tarname}\r\n\r\n"
 
     # FIXME: does not include empty directories
     find "$TARGET"/ -xdev -type f -o -type l | tar cz -T -
