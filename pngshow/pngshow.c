@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
         ymax = yres;
     }
 
-    memset(fb0map, ~0, screensize); // white
+    // memset(fb0map, ~0, screensize); // white
 
     // image[0] is the top left corner, image[0..width*3] the top row
 
