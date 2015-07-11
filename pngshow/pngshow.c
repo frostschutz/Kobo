@@ -134,7 +134,8 @@ int main(int argc, char *argv[])
     // memset(fb0map, ~0, screensize); // white
 
     // image[0] is the top left corner, image[0..width*3] the top row
-
+    int dirty=0;
+#   define DIRTY_SET(a, b) if((char)(a) != (char)(b)) (dirty=1,(a)=(b))
     switch(screen.rotate)
     {
         case 1:
@@ -143,8 +144,10 @@ int main(int argc, char *argv[])
             {
                 for(y=ymax; y--;)
                 {
-                    fb0map[2*(y*line+x)+1] = (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5);
-                    fb0map[2*(y*line+x)+0] = (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3);
+                    DIRTY_SET(fb0map[2*(y*line+x)+1],
+                              (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5));
+                    DIRTY_SET(fb0map[2*(y*line+x)+0],
+                              (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3));
                 }
             }
 
@@ -155,8 +158,10 @@ int main(int argc, char *argv[])
             {
                 for(y=ymax; y--;)
                 {
-                    fb0map[2*((yres-y-1)*line+(xres-x-1))+1] = (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5);
-                    fb0map[2*((yres-y-1)*line+(xres-x-1))+0] = (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3);
+                    DIRTY_SET(fb0map[2*((yres-y-1)*line+(xres-x-1))+1],
+                              (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5));
+                    DIRTY_SET(fb0map[2*((yres-y-1)*line+(xres-x-1))+0],
+                              (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3));
                 }
             }
 
@@ -167,8 +172,10 @@ int main(int argc, char *argv[])
             {
                 for(y=ymax; y--;)
                 {
-                    fb0map[2*((xres-x-1)*line+y)+1] = (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5);
-                    fb0map[2*((xres-x-1)*line+y)+0] = (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3);
+                    DIRTY_SET(fb0map[2*((xres-x-1)*line+y)+1],
+                              (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5));
+                    DIRTY_SET(fb0map[2*((xres-x-1)*line+y)+0],
+                              (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3));
                 }
             }
             break;
@@ -178,13 +185,19 @@ int main(int argc, char *argv[])
             {
                 for(y=ymax; y--;)
                 {
-                    fb0map[2*(x*line+(yres-y-1))+1] = (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5);
-                    fb0map[2*(x*line+(yres-y-1))+0] = (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3);
+                    DIRTY_SET(fb0map[2*(x*line+(yres-y-1))+1],
+                              (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5));
+                    DIRTY_SET(fb0map[2*(x*line+(yres-y-1))+0],
+                              (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3));
                 }
             }
             break;
     }
 
+    if(!dirty)
+    {
+        exit(0);
+    }
     // END PNG
 
     struct mxcfb_update_data update = {
