@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     unsigned char* image;
     unsigned int width, height, x, y, xmax, ymax, xres, yres, line;
 
-    if(lodepng_decode24_file(&image, &width, &height, filename) != 0)
+    if(lodepng_decode32_file(&image, &width, &height, filename) != 0)
     {
         perror("lodepng");
         exit(10);
@@ -144,10 +144,13 @@ int main(int argc, char *argv[])
             {
                 for(y=ymax; y--;)
                 {
+                    if(image[4*(y*width+x)+3] == 0)
+                        continue;
+
                     DIRTY_SET(fb0map[2*(y*line+x)+1],
-                              (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5));
+                              (image[4*(y*width+x)+0]>>3)<<3 | (image[4*(y*width+x)+1]>>5));
                     DIRTY_SET(fb0map[2*(y*line+x)+0],
-                              (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3));
+                              (image[4*(y*width+x)+1]>>2)<<5 | (image[4*(y*width+x)+2]>>3));
                 }
             }
 
@@ -158,10 +161,13 @@ int main(int argc, char *argv[])
             {
                 for(y=ymax; y--;)
                 {
+                    if(image[4*(y*width+x)+3] == 0)
+                        continue;
+
                     DIRTY_SET(fb0map[2*((yres-y-1)*line+(xres-x-1))+1],
-                              (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5));
+                              (image[4*(y*width+x)+0]>>3)<<3 | (image[4*(y*width+x)+1]>>5));
                     DIRTY_SET(fb0map[2*((yres-y-1)*line+(xres-x-1))+0],
-                              (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3));
+                              (image[4*(y*width+x)+1]>>2)<<5 | (image[4*(y*width+x)+2]>>3));
                 }
             }
 
@@ -172,10 +178,13 @@ int main(int argc, char *argv[])
             {
                 for(y=ymax; y--;)
                 {
+                    if(image[4*(y*width+x)+3] == 0)
+                        continue;
+
                     DIRTY_SET(fb0map[2*((xres-x-1)*line+y)+1],
-                              (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5));
+                              (image[4*(y*width+x)+0]>>3)<<3 | (image[4*(y*width+x)+1]>>5));
                     DIRTY_SET(fb0map[2*((xres-x-1)*line+y)+0],
-                              (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3));
+                              (image[4*(y*width+x)+1]>>2)<<5 | (image[4*(y*width+x)+2]>>3));
                 }
             }
             break;
@@ -185,10 +194,13 @@ int main(int argc, char *argv[])
             {
                 for(y=ymax; y--;)
                 {
+                    if(image[4*(y*width+x)+3] == 0)
+                        continue;
+
                     DIRTY_SET(fb0map[2*(x*line+(yres-y-1))+1],
-                              (image[3*(y*width+x)+0]>>3)<<3 | (image[3*(y*width+x)+1]>>5));
+                              (image[4*(y*width+x)+0]>>3)<<3 | (image[4*(y*width+x)+1]>>5));
                     DIRTY_SET(fb0map[2*(x*line+(yres-y-1))+0],
-                              (image[3*(y*width+x)+1]>>2)<<5 | (image[3*(y*width+x)+2]>>3));
+                              (image[4*(y*width+x)+1]>>2)<<5 | (image[4*(y*width+x)+2]>>3));
                 }
             }
             break;
