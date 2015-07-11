@@ -15,12 +15,59 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+// 180° rotation hack
+void rotation_hack(int fb0, struct fb_var_screeninfo *screen)
+{
+    unsigned int rotate;
+
+    if(access("/tmp/pngshow_rotation_hack_disable", F_OK) != -1)
+    {
+        // do nothing
+    }
+
+    else if(access("/tmp/pngshow_rotation_hack_enable", F_OK) != -1)
+    {
+        // apply hack
+        (*screen).rotate ^= 0x2;
+    }
+
+    else
+    {
+        // auto detect once
+        rotate = (*screen).rotate;
+        (*screen).rotate ^= 0x2;
+
+        if(ioctl(fb0, FBIOPUT_VSCREENINFO, &(*screen)) < 0)
+        {
+            perror("rotation hack");
+            exit(20);
+        }
+
+        if(rotate != (*screen).rotate)
+        {
+            (*screen).rotate = rotate;
+            if(ioctl(fb0, FBIOPUT_VSCREENINFO, &(*screen)) < 0)
+            {
+                perror("rotation hack restore");
+                exit(21);
+            }
+            (*screen).rotate ^= 0x2;
+            fclose(fopen("/tmp/pngshow_rotation_hack_enable", "wb"));
+        }
+
+        else
+        {
+            fclose(fopen("/tmp/pngshow_rotation_hack_disable", "wb"));
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     int fb0 = open("/dev/fb0", O_RDWR);
     char *fb0map;
     struct fb_var_screeninfo screen = {0};
-    unsigned int screensize, rotate;
+    unsigned int screensize;
 
     if(fb0 < 0)
     {
@@ -34,17 +81,7 @@ int main(int argc, char *argv[])
         exit(2);
     }
 
-    // 180° rotation hack
-    // FIXME: remember result for subsequent calls to avoid race condition
-    rotate = screen.rotate;
-    screen.rotate ^= 0x2;
-    ioctl(fb0, FBIOPUT_VSCREENINFO, &screen);
-    if(rotate != screen.rotate)
-    {
-        screen.rotate = rotate;
-        ioctl(fb0, FBIOPUT_VSCREENINFO, &screen);
-        screen.rotate ^= 0x2;
-    }
+    rotation_hack(fb0, &screen);
 
     screensize = screen.xres_virtual * screen.yres_virtual * 2;
 
