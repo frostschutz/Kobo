@@ -1,17 +1,13 @@
 #!/bin/sh
 
-# for pickel from nickel
-eval $(xargs -0 < /proc/$(pidof nickel)/environ)
-export PLATFORM PRODUCT
 PATH="/usr/local/AutoShelf":"$PATH"
 
 progress() {
-    [ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
-    local i=0
     while [ -e /tmp/suspend-nickel ]
     do
-        i=$((($i+10)%11)) # backwards
-        nice zcat /etc/images/"$PREFIX"on-"$i".raw.gz | /usr/local/Kobo/pickel showpic 1
+        pngshow /usr/local/AutoShelf/autoshelf.png
+        sleep 2
+        [ -e /tmp/suspend-nickel ] && pngshow /usr/local/AutoShelf/autoshelf-off.png
         sleep 2
     done
 }
@@ -28,7 +24,6 @@ udev_workarounds() {
 suspend_nickel() {
     mkdir /tmp/suspend-nickel && (
         pkill -SIGSTOP nickel
-        cat /sys/class/graphics/fb0/rotate > /tmp/rotate-nickel
         progress &
     )
     mkdir /tmp/suspend-nickel/"$1" || exit
@@ -37,9 +32,6 @@ suspend_nickel() {
 resume_nickel() {
     rmdir /tmp/suspend-nickel/"$1"
     rmdir /tmp/suspend-nickel && (
-        killall pickel
-        cat /tmp/rotate-nickel > /sys/class/graphics/fb0/rotate
-        cat /sys/class/graphics/fb0/rotate > /sys/class/graphics/fb0/rotate # 180° fix
         pkill -SIGCONT nickel
     )
 }
@@ -101,6 +93,47 @@ autoshelf() {
 }
 
 udev_workarounds
+
+if [ "$ACTION" == "add" ]
+then
+    # prompt mode
+    OFF=1
+    rm /tmp/autoshelf-on
+
+    while cat /dev/input/event1 | dd bs=1 count=1
+    do
+        if [ -e /mnt/onboard/.kobo ]
+        then
+            exit
+        fi
+
+        if [ "$OFF" == "1" ]
+        then
+            OFF=0
+            touch /tmp/autoshelf-on
+            pngshow "/usr/local/AutoShelf/autoshelf.png"
+        else
+            OFF=1
+            rm /tmp/autoshelf-on
+            pngshow "/usr/local/AutoShelf/autoshelf-off.png"
+        fi
+
+        sleep 1
+    done
+
+    exit
+    # exit prompt mode
+elif [ "$ACTION" != "remove" ]
+then
+    # unknown mode
+    exit
+elif [ ! -e /tmp/autoshelf-on ]
+then
+    # disabled mode
+    exit
+fi
+
+rm /tmp/autoshelf-on
 
 suspend_nickel autoshelf
 

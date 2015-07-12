@@ -1,1 +1,1 @@
-KERNEL=="fsl-usb2-udc", ACTION=="remove", RUN+="/usr/local/AutoShelf/autoshelf.sh"
+KERNEL=="fsl-usb2-udc", SUBSYSTEM=="drivers", RUN+="/usr/local/AutoShelf/autoshelf.sh"
