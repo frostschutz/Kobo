@@ -1,0 +1,1 @@
+KERNEL=="fsl-usb2-udc", ACTION=="remove", RUN+="/usr/local/NickelIcons/nickelicons.sh"

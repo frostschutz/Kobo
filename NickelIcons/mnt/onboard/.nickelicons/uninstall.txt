@@ -1,0 +1,2 @@
+In order to uninstall the Nickel Icons mod,
+simply delete or rename the .nickelicons dir.
