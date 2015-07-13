@@ -1,0 +1,2 @@
+# List the to-be-processed files, one file per line.
+/usr/local/Kobo/nickel
