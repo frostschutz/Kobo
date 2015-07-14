@@ -20,6 +20,11 @@ http://www.mobileread.com/forums/showthread.php?p=3004080#post3004080
 Upgrade/Replace the Kobo's internal SD card on the fly.
 http://www.mobileread.com/forums/showthread.php?t=261578
 
+- NickelIcons -
+
+Modify PNG images embedded in the nickel binary.
+http://www.mobileread.com/forums/showthread.php?t=262837
+
 - ScreenSaver -
 
 Display a random screensaver PNG image on standby/poweroff.
