@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 hexa() {
     hexdump -e '16/1 "%02x" "\n"' "$@"
 }
@@ -25,16 +27,19 @@ then
 fi
 
 # PNG magic is 8 bytes: 0x89 P N G 0x0d 0x0a 0x1a 0x0a
-PNG_MAGIC=$'\x89PNG\x0d\x0a\x1a\x0a'
-PNG_MAGIC=$(echo -n "$PNG_MAGIC" | hexa)
+PNG_MAGIC=$(echo -en '\x89PNG\x0d\x0a\x1a\x0a' | hexa)
+MNG_MAGIC=$(echo -en '\x8aMNG\x0d\x0a\x1a\x0a' | hexa)
+IEND_MAGIC=$(echo -en '\x00\x00\x00\x00IEND' | hexa)
+MEND_MAGIC=$(echo -en '\x00\x00\x00\x00MEND' | hexa)
+ZERO_MAGIC=$(echo -en '\x00\x00\x00\x00\x00\x00\x00\x00' | hexa)
 
 dump() {
-    input="$1"
-    offset="$2"
-    length="$3"
-    outdir="$4"
+    local input="$1"
+    local offset="$2"
+    local length="$3"
+    local outdir="$4"
 
-    file="${outdir}/${offset}_${length}.png"
+    file="${outdir}/${offset}_${length}.${FILETYPE}"
 
     if [ ! -e "$file" ]
     then
@@ -47,12 +52,12 @@ dump() {
 }
 
 restore() {
-    indir="$1"
-    offset="$2"
-    length="$3"
-    output="$4"
+    local indir="$1"
+    local offset="$2"
+    local length="$3"
+    local output="$4"
 
-    file="${indir}/restore/${offset}_${length}.png"
+    file="${indir}/restore/${offset}_${length}.${FILETYPE}"
 
     if [ ! -e "$file" ]
     then
@@ -63,10 +68,15 @@ restore() {
     filesize=$(stat -c %s "$file")
     filemagic=$(hexa -n 8 "$file")
 
-    if [ "$filemagic" != "$PNG_MAGIC" ]
+    if [ "$FILETYPE" == "png" -a "$filemagic" != "$PNG_MAGIC" ]
     then
         # not a PNG, no restore
         echo "Will not restore '${file}': not in PNG format."
+        return
+    elif [ "$FILETYPE" == "mng" -a "$filemagic" != "$MNG_MAGIC" ]
+    then
+        # not a MNG
+        echo "Will not restore '${file}': not in MNG format."
         return
     elif [ "$filesize" -gt "$length" ]
     then
@@ -91,29 +101,30 @@ restore() {
         fi
     fi
 
-    # restore and pad with zeroes
-    cat "$file" /dev/zero |
-        dd conv=notrunc bs=1 seek="$offset" count="$length" of="$output" &&
-        echo "Successfully restored '${file}'." ||
-            echo "Failed to restore '${file}' :: error $?"
-
-    # move the file regardless of success to prevent pointless retries
-    mv "$file" "$indir"/done
+    # restore without padding zeroes, so original IEND remains intact
+    if cat "$file" |
+            dd conv=notrunc bs=1 seek="$offset" count="$length" of="$output"
+    then
+        echo "Successfully restored '${file}'."
+        mv "$file" "$indir"/done
+    else
+        echo "Failed to restore '${file}' :: error $?"
+        mv "$file" "$indir"/invalid
+    fi
 }
 
 parse() {
     TARGET="$1"
     base=$(basename "$TARGET")
     dumpdir="/mnt/onboard/.nickelicons/$base"
-    mkdir -p "$dumpdir"/restore "$dumpdir"/done
 
     # avoid unnecessary re-runs
-    for dumped in "$dumpdir"/*.png
+    for dumped in "$dumpdir"/*.*
     do
         break
     done
 
-    for restored in "$dumpdir"/restore/*.png
+    for restored in "$dumpdir"/restore/*.*
     do
         break
     done
@@ -125,38 +136,72 @@ parse() {
     fi
 
     # do it
+    mkdir -p "$dumpdir"/restore "$dumpdir"/done "$dumpdir"/invalid
+    local start=0
+    local length=0
+    local offset=0
+    FILETYPE=png
+
     strings -o -n 3 "$TARGET" \
-    | grep PNG \
+    | grep -E '(PNG|IEND|MNG|MEND)' \
     | while read offset line
     do
         # octal to decimal
-        offset=$((0$offset - 1))
+        offset=$((0$offset))
 
-        # verify magic
-        magic=$(hexa -s "$offset" -n 8 "$TARGET" bs=1 count=8 skip="$offset")
-
-        if [ "$magic" != "$PNG_MAGIC" ]
+        # find start offset
+        if [ "$line" == "PNG" -o "$line" == "MNG" ]
         then
-            # not a PNG
-            continue
+            # verify magic
+            magic=$(hexa -s $(($offset-1)) -n 8 "$TARGET")
+
+            if [ "$magic" == "$PNG_MAGIC" -o "$magic" == "$MNG_MAGIC" ]
+            then
+                # dump previous match
+                if [ "$length" -gt 0 ]
+                then
+                    echo "== '$oldlen' '$(($start-2))' '$TARGET'"
+                    oldlen=$((0x$(hexa -n 2 -s $(($start-2)) "$TARGET")))
+                    exit
+                    if [ "$oldlen" != "$length" ]
+                    then
+                        echo "$start :: new = $length old = $oldlen"
+                    fi
+
+                    dump "$TARGET" $start $length "$dumpdir"
+                    restore "$dumpdir" $start $length "$TARGET"
+                fi
+
+                start=$(($offset-1))
+                length=0
+                FILETYPE=png
+
+                if [ "$line" == "MNG" ]
+                then
+                    FILETYPE=mng
+                fi
+            fi
+        elif [ "${line:0:4}" == "IEND" -o "${line:0:4}" == "MEND" ]
+        then
+            magic=$(hexa -s $(($offset-4)) -n 8 "$TARGET")
+
+            if [ "$magic" == "$IEND_MAGIC" -o "$magic" == "$MEND_MAGIC" ]
+            then
+                length=$(($offset+8-$start))
+            fi
         fi
 
-        # determine length
-        length=$((0x$(hexa -n 2 -s $(($offset-2)) "$TARGET")))
-
-        dump "$TARGET" $offset $length "$dumpdir"
-        restore "$dumpdir" $offset $length "$TARGET"
+        # FIXME: dump final match
     done
 
     # leftovers would prevent unnecessary re-run optimization
-    mkdir "$dumpdir"/invalid
     mv "$dumpdir"/restore/* "$dumpdir"/invalid
     rmdir "$dumpdir"/invalid
 }
 
 logfile=/mnt/onboard/.nickelicons/report.txt
 
-rm "$logfile"
+rm -f "$logfile"
 
 strings -n 1 /mnt/onboard/.nickelicons/targets.txt | grep -v ^# | while read target
 do
@@ -168,3 +213,5 @@ do
         echo "---- $(date) ---- Skipping '${target}': not a regular file. ----" >> "$logfile"
     fi
 done
+
+sync
