@@ -162,6 +162,9 @@ _view() {
         "tar")
             _view_tar
             ;;
+        "upload")
+            _view_upload
+            ;;
     esac
 }
 
@@ -224,7 +227,7 @@ _view_index() {
 
     echo '</table>'
 
-    _footer "action=tar" "&#9660; TAR"
+    _footer "action=upload" "&#8593; Upload" "action=tar" "&#8595; Download"
 }
 
 _view_download() {
@@ -260,6 +263,40 @@ _view_tar() {
 
     # FIXME: does not include empty directories
     find "$TARGET"/ -xdev -type f -o -type l | tar cz -T -
+}
+
+_view_upload() {
+    if [ "$REQUEST_METHOD" == "POST" ]
+    then
+        _handle_upload
+    fi
+
+    _header
+
+    if [ ! -d "$TARGET"/ ]
+    then
+        _die "Not a directory: $TARGET"
+    fi
+
+    htmltarget=$(_htmlspecialchars "$TARGET")
+
+    echo "<h2>Upload to ${htmltarget}</h2>"
+
+    echo '<form method="post" enctype="multipart/form-data">'
+    echo '<p>Automatically unpack and install TGZ? <input type="checkbox" name="untar" value="untar" id="untar" checked="checked"></p>'
+    echo '<p>File(s) to upload: <input type="file" name="upload[]" multiple="multiple"></p>'
+    echo '<p><input type="submit" value="Upload"><input type="reset"></p>'
+    echo '</form>'
+
+    _footer "" "Back to Index"
+}
+
+_handle_upload() {
+    set > /tmp/view_upload
+    cat > /tmp/view_upload_data
+
+    _header
+    _die "Not Implemented Yet"
 }
 
 # --- Main: ---
