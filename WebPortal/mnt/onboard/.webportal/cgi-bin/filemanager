@@ -292,6 +292,26 @@ _view_upload() {
 }
 
 _handle_upload() {
+    boundary="${CONTENT_TYPE##*=}"
+    boundary=$(echo -n "$boundary" | hexdump -v -e '1 1 "%02x"')
+    newline="0d0a"
+    dash="2d2d"
+    buffer=""
+
+    # read from stdin
+    hexdump -v -e '512 1 "%02x" "\n"' | while read line
+    do
+        buffer="$buffer$line"
+
+        case "$buffer" in
+            *$boundary*) # handle separator
+
+            ;;
+            *)
+            ;;
+        esac
+    done
+
     set > /tmp/view_upload
     cat > /tmp/view_upload_data
 
