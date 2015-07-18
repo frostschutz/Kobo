@@ -291,29 +291,73 @@ _view_upload() {
     _footer "" "Back to Index"
 }
 
+_pipe_reader() {
+    local pipe="$1"
+    local cmd="$2"
+    shift 2
+    (while cat "$pipe"; do :; done) | ("$cmd" "$@" ; cat > /dev/null)
+}
+
 _handle_upload() {
+    # hexdump format string
+    hexformat='1/0 "\\" 1/0 "x" 1/1 "%02x" '
+    for power in $(seq 1 9) # 512
+    do
+        hexformat="$hexformat$hexformat"
+    done
+    hexformat="$hexformat"' "\n"'
+
     boundary="${CONTENT_TYPE##*=}"
-    boundary=$(echo -n "$boundary" | hexdump -v -e '1 1 "%02x"')
-    newline="0d0a"
-    dash="2d2d"
+    boundary=$(echo -n "$boundary" | hexdump -v -e "$hexformat" | sed -r -e 's@[\\x ]*$@@' -e 's@\\@\\\\@g')
+    newline="\\\\x0d\\\\x0a"
+    dash="\\\\x2d\\\\x2d"
     buffer=""
 
-    # read from stdin
-    hexdump -v -e '512 1 "%02x" "\n"' | while read line
-    do
-        buffer="$buffer$line"
-
-        case "$buffer" in
-            *$boundary*) # handle separator
-
-            ;;
-            *)
-            ;;
-        esac
-    done
-
     set > /tmp/view_upload
-    cat > /tmp/view_upload_data
+    rm /tmp/view_upload_data
+
+    # read from stdin
+    hexdump -v -e "$hexformat" | sed -r -e "
+:top
+s/\n//
+s/[\\\\x ]*$//
+
+:boundary-check; t reset-boundary-check; :reset-boundary-check
+s/($newline)?($dash)?$boundary($dash)?($newline)?/\nHEADER /
+t before-boundary-dump
+b data-dump
+
+:before-boundary-dump
+/.\n/ {
+    P
+}
+s/^.*\n//
+
+:header-check
+/$newline$newline/ ! {
+    N
+    s/\n//
+    s/[\\\\x ]*$//
+    b header-check
+}
+s/$newline$newline/\n/
+P
+s/^.*\n//
+b boundary-check
+
+:data-dump; t reset-data-dump; :reset-data-dump
+s/.{256}$/\n\0/
+t do-data-dump
+b top
+
+:do-data-dump
+P
+s/^.*\n//
+N
+b top" | while read -r line
+    do
+        echo "$line" >> /tmp/view_upload_data
+    done
 
     _header
     _die "Not Implemented Yet"
