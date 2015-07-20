@@ -6,26 +6,61 @@
  *
  *  This program receives the multipart/form-data stream [from busybox-httpd],
  *  and prints out headers which can be easily parsed in shell.
- *  The binary data itself goes into a named pipe.
+ *  The binary data itself goes into a named pipe / fifo.
  *
  */
 
 #include "multipart_parser.h"
+#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #define BLOCKSIZE 65536
+
+int fifo;
+char fifoname[1000];
+
+// These are not the standard callbacks, but buffered variants, see below.
 
 void header_field(size_t len, const char* buf)
 {
-    printf("HEADER %.*s\n", len, buf);
+    printf("FIELD %.*s\n", len, buf);
+
+    if(fifo)
+    {
+        close(fifo);
+        fifo = 0;
+        unlink(fifoname);
+    }
 }
+
 void header_value(size_t len, const char* buf)
 {
     printf("VALUE %.*s\n", len, buf);
 }
+
 void part_data(size_t len, const char* buf)
 {
+    ssize_t n;
+
     printf("DATA %d\n", len);
+
+    if(!fifo)
+    {
+        fprintf(stderr, "opening fifo\n");
+        mkfifo(fifoname, 0666);
+        fifo = open(fifoname, O_WRONLY);
+    }
+
+    n = write(fifo, buf, len);
+
+    if(n < len)
+    {
+        fprintf(stderr, "Warning: short write (%d of %d bytes)\n", n, len);
+    }
 }
 
 // The multipart-parser has a few oddities. It calls data with 1 or even 0 bytes.
@@ -98,7 +133,21 @@ int limbo_body_end(multipart_parser* p)
 
 int main(int argc, char *argv[])
 {
+    if(argc != 3)
+    {
+        fprintf(stderr, "Usage: %s --<boundary-string> <fifo>\n", argv[0]);
+        exit(1);
+    }
+
+    strcpy(fifoname, argv[2]);
+
+    // line buffering so shell can parse us properly
+    setvbuf(stdout, NULL, _IOLBF, 0);
+    // ignore sigpipe errors to handle incomplete reads
+    signal(SIGPIPE, SIG_IGN);
+
     multipart_parser_settings callbacks = {
+        // the parser gives us small and cut-up data, buffer it in limbo
         .on_header_field=limbo_field,
         .on_header_value=limbo_value,
         .on_part_data=limbo_data,
@@ -114,6 +163,8 @@ int main(int argc, char *argv[])
     {
         multipart_parser_execute(parser, buf, len);
     }
+
+    return 0;
 }
 
 /* --- End of file. --- */
