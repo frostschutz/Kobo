@@ -1,5 +1,7 @@
 #!/bin/sh
 
+PATH=/usr/local/WebPortal:"$PATH"
+
 # --- Helpers: ---
 
 _htmlspecialchars() {
@@ -160,12 +162,15 @@ _view() {
             cd "$TARGET" && _view_index || _view_download
             ;;
         "tar")
-            _view_tar
+            cd "$TARGET" && _view_tar || _die "Can not tar invalid target."
             ;;
         "upload")
-            _view_upload
+            cd "$TARGET" && _view_upload || _die "Can not upload invalid target."
             ;;
     esac
+
+    _header
+    _die 'Invalid View'
 }
 
 _view_index() {
@@ -266,12 +271,12 @@ _view_tar() {
 }
 
 _view_upload() {
+    _header
+
     if [ "$REQUEST_METHOD" == "POST" ]
     then
         _handle_upload
     fi
-
-    _header
 
     if [ ! -d "$TARGET"/ ]
     then
@@ -283,84 +288,91 @@ _view_upload() {
     echo "<h2>Upload to ${htmltarget}</h2>"
 
     echo '<form method="post" enctype="multipart/form-data">'
-    echo '<p>Automatically unpack and install TGZ? <input type="checkbox" name="untar" value="untar" id="untar" checked="checked"></p>'
+    echo '<p>Automatically handle TAR/TGZ files? '
+    echo '<input type="radio" id="xa" name="untar" value="/"><label for="xa">Install (KoboRoot)</label> '
+    echo '<input type="radio" id="xb" name="untar" value="."><label for="xb">Unpack here</label> '
+    echo '<input type="radio" id="xc" name="untar" value="0" checked><label for="xc">No (leave as-is)</label> '
+    echo '</p>'
+
     echo '<p>File(s) to upload: <input type="file" name="upload[]" multiple="multiple"></p>'
     echo '<p><input type="submit" value="Upload"><input type="reset"></p>'
     echo '</form>'
 
-    _footer "" "Back to Index"
-}
-
-_pipe_reader() {
-    local pipe="$1"
-    local cmd="$2"
-    shift 2
-    (while cat "$pipe"; do :; done) | ("$cmd" "$@" ; cat > /dev/null)
+    _footer
 }
 
 _handle_upload() {
-    # hexdump format string
-    hexformat='1/0 "\\" 1/0 "x" 1/1 "%02x" '
-    for power in $(seq 1 9) # 512
+    boundary="${CONTENT_TYPE##*boundary=}"
+
+    if [ "$boundary" == "" ]
+    then
+        _die "Error in the post data."
+    fi
+
+    filename="/dev/null"
+    untar=0
+
+    multipart_pipe --"$boundary" "/tmp/filemanagerXXXXXX" | while read key value
     do
-        hexformat="$hexformat$hexformat"
-    done
-    hexformat="$hexformat"' "\n"'
+        case "$key" in
+            FIELD)
+                if [ "$value" == "Content-Disposition" ]
+                then
+                    filename="/dev/null"
+                fi
+                ;;
+            VALUE)
+                case "$value" in
+                    'form-data; name="untar"')
+                        untar=1
+                        ;;
+                    'form-data; name="upload[]"; filename=""')
+                        # special case: nothing uploaded
+                        echo "No filename specified.<br>"
+                        ;;
+                    'form-data; name="upload[]"; filename="'*)
+                        filename="${value##*filename=\"}"
+                        filename="${filename%%\"}"
+                        filename="$(basename "$filename")"
+                        filename="$TARGET"/"$filename"
+                        ;;
+                esac
+                ;;
+            DATA)
+                basename=$(basename "$filename")
+                if [ "$filename" == "" ]
+                then
+                    continue
+                elif [ "$untar" == 1 ]
+                then
+                    untar=$(cat "$value") # /, . or 0
+                elif [ "$untar" != "0" -a "${filename##*.}" == "tgz" ]
+                then
+                    echo "Receiving and untarring $(_htmlspecialchars "\"$basename\"")...<br>"
+                    tar zx -C "$untar" < "$value" &
+                elif [ "$untar" != "0" -a "${filename##*.}" == "tar" ]
+                then
+                    echo "Receiving and untarring $(_htmlspecialchars "\"$basename\"")...<br>"
+                    tar x -C "$untar" < "$value" &
+                elif [ "$filename" == "/dev/null" ]
+                then
+                    cat < "$value" > /dev/null &
+                else
+                    echo "Receiving $(_htmlspecialchars "\"$basename\"")...<br>"
+                    cat < "$value" > "$filename" &
+                fi
 
-    boundary="${CONTENT_TYPE##*=}"
-    boundary=$(echo -n "$boundary" | hexdump -v -e "$hexformat" | sed -r -e 's@[\\x ]*$@@' -e 's@\\@\\\\@g')
-    newline="\\\\x0d\\\\x0a"
-    dash="\\\\x2d\\\\x2d"
-    buffer=""
-
-    set > /tmp/view_upload
-    rm /tmp/view_upload_data
-
-    # read from stdin
-    hexdump -v -e "$hexformat" | sed -r -e "
-:top
-s/\n//
-s/[\\\\x ]*$//
-
-:boundary-check; t reset-boundary-check; :reset-boundary-check
-s/($newline)?($dash)?$boundary($dash)?($newline)?/\nHEADER /
-t before-boundary-dump
-b data-dump
-
-:before-boundary-dump
-/.\n/ {
-    P
-}
-s/^.*\n//
-
-:header-check
-/$newline$newline/ ! {
-    N
-    s/\n//
-    s/[\\\\x ]*$//
-    b header-check
-}
-s/$newline$newline/\n/
-P
-s/^.*\n//
-b boundary-check
-
-:data-dump; t reset-data-dump; :reset-data-dump
-s/.{256}$/\n\0/
-t do-data-dump
-b top
-
-:do-data-dump
-P
-s/^.*\n//
-N
-b top" | while read -r line
-    do
-        echo "$line" >> /tmp/view_upload_data
+                filename=""
+                ;;
+        esac
     done
 
-    _header
-    _die "Not Implemented Yet"
+    sync
+
+    htmltarget=$(_htmlspecialchars $(basename "$TARGET"))
+    urltarget=$(_urlencode "$TARGET")
+
+    _footer "?$urltarget" "Back to $htmltarget"
 }
 
 # --- Main: ---
