@@ -22,36 +22,48 @@
 
 int fifo;
 char fifoname[1000];
+char template[1000];
 
 // These are not the standard callbacks, but buffered variants, see below.
 
 void header_field(size_t len, const char* buf)
 {
-    printf("FIELD %.*s\n", len, buf);
-
     if(fifo)
     {
         close(fifo);
         fifo = 0;
         unlink(fifoname);
     }
+
+    if(len)
+    {
+        printf("FIELD %.*s\n", len, buf);
+    }
 }
 
 void header_value(size_t len, const char* buf)
 {
-    printf("VALUE %.*s\n", len, buf);
+    if(len)
+    {
+        printf("VALUE %.*s\n", len, buf);
+    }
 }
 
 void part_data(size_t len, const char* buf)
 {
     ssize_t n;
 
-    printf("DATA %d\n", len);
+    if(!fifo)
+    {
+        strcpy(fifoname, template);
+        mktemp(fifoname);
+        mkfifo(fifoname, 0666);
+    }
+
+    printf("DATA %s\n", fifoname);
 
     if(!fifo)
     {
-        fprintf(stderr, "opening fifo\n");
-        mkfifo(fifoname, 0666);
         fifo = open(fifoname, O_WRONLY);
     }
 
@@ -73,11 +85,6 @@ char limbo[BLOCKSIZE];
 
 void limbo_pop()
 {
-    if(limbo_len == 0)
-    {
-        return;
-    }
-
     switch(limbo_s)
     {
         case 1:
@@ -135,11 +142,11 @@ int main(int argc, char *argv[])
 {
     if(argc != 3)
     {
-        fprintf(stderr, "Usage: %s --<boundary-string> <fifo>\n", argv[0]);
+        fprintf(stderr, "Usage: %s --<boundary> <fifo>XXXXXX\n", argv[0]);
         exit(1);
     }
 
-    strcpy(fifoname, argv[2]);
+    strcpy(template, argv[2]);
 
     // line buffering so shell can parse us properly
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -162,6 +169,13 @@ int main(int argc, char *argv[])
     while( (len=read(0, buf, BLOCKSIZE)) > 0 )
     {
         multipart_parser_execute(parser, buf, len);
+    }
+
+    if(fifo)
+    {
+        close(fifo);
+        fifo = 0;
+        unlink(fifoname);
     }
 
     return 0;
