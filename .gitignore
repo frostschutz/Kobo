@@ -12,3 +12,4 @@ sqlite3
 stdbuf
 usr/local/Kobo/*
 mxcfb.h
+multipart_pipe
