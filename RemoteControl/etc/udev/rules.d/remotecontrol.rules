@@ -1,0 +1,2 @@
+KERNEL=="usb_plug", RUN+="/usr/local/RemoteControl/remotecontrol.sh usb_plug"
+KERNEL=="usb_host", RUN+="/usr/local/RemoteControl/remotecontrol.sh usb_host"
