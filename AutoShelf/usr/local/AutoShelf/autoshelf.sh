@@ -151,16 +151,7 @@ done
 
 if [ -e /mnt/onboard/.kobo/KoboReader.sqlite ]
 then
-    result=$(autoshelf)
-
-    if echo "$result" | md5sum -c /usr/local/AutoShelf/md5sum
-    then
-        echo "Already done..."
-    else
-        echo "Updating database..."
-        echo "$result" | md5sum > /usr/local/AutoShelf/md5sum
-        echo "$result" | sqlite3 /mnt/onboard/.kobo/KoboReader.sqlite
-    fi
+    autoshelf | sqlite3 /mnt/onboard/.kobo/KoboReader.sqlite
 
     if [ -e /mnt/onboard/.autoshelf-uninstall ]
     then
