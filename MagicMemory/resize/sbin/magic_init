@@ -62,6 +62,7 @@ nickel_grab_env() {
 
 nickel_kill() {
     killall nickel
+    killall sickel # 3.16.10 watchdog
     while sleep 1
     do
         pidof nickel || break
