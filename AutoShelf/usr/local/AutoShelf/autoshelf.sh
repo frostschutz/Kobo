@@ -23,6 +23,7 @@ udev_workarounds() {
 
 suspend_nickel() {
     mkdir /tmp/suspend-nickel && (
+        pkill -SIGSTOP sickel # 3.16.10 watchdog
         pkill -SIGSTOP nickel
         progress &
     )
@@ -33,6 +34,7 @@ resume_nickel() {
     rmdir /tmp/suspend-nickel/"$1"
     rmdir /tmp/suspend-nickel && (
         pkill -SIGCONT nickel
+        pkill -SIGKILL sickel # 3.16.10 watchdog
     )
 }
 
