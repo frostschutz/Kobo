@@ -11,10 +11,21 @@ udev_workarounds() {
     fi
 }
 
+isbusy() {
+    grep -E '^/dev/mmcblk(0p3|1p1) ' /proc/mounts || \
+    grep -E '^([^ ]+ ){3}b3:0[39] ' /proc/*/maps || \
+    find /proc/[0-9]*/cwd /proc/[0-9]*/fd -exec stat -tL {} + \
+    | grep -E '^([^ ]+ ){6}b30[39]'
+}
+
 showface() {
-    grep -E '^/dev/mmcblk(0p3|1p1) ' /proc/mounts \
-    && pngshow /usr/local/UsbDebug/sadface.png \
-    || pngshow /usr/local/UsbDebug/happyface.png
+    if isbusy > /tmp/UsbDebug.tmp
+    then
+        mv /tmp/UsbDebug.tmp /tmp/UsbDebug.log
+        pngshow /usr/local/UsbDebug/sadface.png
+    else
+        pngshow /usr/local/UsbDebug/happyface.png
+    fi
 }
 
 udev_workarounds
