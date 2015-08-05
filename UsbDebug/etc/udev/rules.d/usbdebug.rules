@@ -1,0 +1,1 @@
+KERNEL=="fsl-usb2-udc", SUBSYSTEM=="drivers", RUN+="/usr/local/UsbDebug/usbdebug.sh"
