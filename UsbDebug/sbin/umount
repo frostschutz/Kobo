@@ -4,13 +4,13 @@
 # lazy umount hook
 #
 
-if [ "$1" == "-l" ]
+if [ "$1" == "-l" ] && mountpoint -q "$2"
 then
     shift
     /bin/umount "$@" \
     && echo umount success "$@" $(date) >> /tmp/usbdebug-umount \
     && exit 0 \
-    || echo umount failure "$@" $(date) >> /tmp/usbdebug-umount
+    || echo umount failure "$@" $(date) >> /tmp/usbdebug-umount \
     # undo shift
     set -- -l "$@"
 fi
