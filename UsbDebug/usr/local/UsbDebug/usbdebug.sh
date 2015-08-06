@@ -23,7 +23,8 @@ showface() {
     if isbusy > /tmp/UsbDebug.tmp
     then
         mv /tmp/usbdebug-umount /tmp/UsbDebug.umount
-        mv /tmp/UsbDebug.tmp /tmp/UsbDebug.log
+        mv /tmp/UsbDebug.tmp /tmp/UsbDebug.log \
+        && pstree -p > /tmp/UsbDebug.pstree
         pngshow /usr/local/UsbDebug/sadface.png
         sleep 1
         pngshow /usr/local/UsbDebug/sadface.png
