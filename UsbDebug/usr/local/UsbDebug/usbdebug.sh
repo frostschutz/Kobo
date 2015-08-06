@@ -68,6 +68,8 @@ then
                 rm -f /etc/udev/rules.d/usbdebug.rules
                 rm -rf /usr/local/UsbDebug
             fi
+
+            exit
         fi
     done
 fi
