@@ -16,13 +16,13 @@ isbusy() {
     grep -E '^([^ ]+ ){3}b3:0[39] ' /proc/*/maps || \
     find /proc/[0-9]*/cwd /proc/[0-9]*/fd -exec stat -tL {} + \
     | grep -E '^([^ ]+ ){6}b30[39]' ||
-    grep -E '^failure.* /mnt/(onboard|sd) ' /tmp/usbdebug-umount
+    grep -E ' failure.* /mnt/(onboard|sd) ' /tmp/usbdebug-umount
 }
 
 showface() {
     if isbusy > /tmp/UsbDebug.tmp
     then
-        rm /tmp/usbdebug-umount
+        mv /tmp/usbdebug-umount /tmp/UsbDebug.umount
         mv /tmp/UsbDebug.tmp /tmp/UsbDebug.log
         pngshow /usr/local/UsbDebug/sadface.png
         sleep 1
@@ -55,4 +55,19 @@ then
 elif [ "$ACTION" == "remove" ]
 then
     rm -rf "/tmp/UsbDebug"
+
+    while sleep 1
+    do
+        if [ -e "/mnt/onboard/.kobo/KoboReader.sqlite" ]
+        then
+            mkdir /mnt/onboard/.usbdebug
+            cp /tmp/UsbDebug.* /mnt/onboard/.usbdebug
+
+            if [ -e /mnt/onboard/.usbdebug/uninstall ]
+            then
+                rm -f /etc/udev/rules.d/usbdebug.rules
+                rm -rf /usr/local/UsbDebug
+            fi
+        fi
+    done
 fi
