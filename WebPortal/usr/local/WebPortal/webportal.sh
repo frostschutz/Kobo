@@ -41,5 +41,5 @@ fi
 ifconfig lo 127.0.0.1
 ip addr add 127.0.0.42 dev lo
 
-# start webserver
-httpd -f -h /mnt/onboard/.webportal
+# start webserver (with cwd workaround)
+LD_PRELOAD="/usr/local/WebPortal/httpd_preload.so" httpd -f -h /mnt/onboard/.webportal
