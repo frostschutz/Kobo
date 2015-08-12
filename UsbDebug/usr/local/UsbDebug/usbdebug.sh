@@ -24,7 +24,8 @@ showface() {
     then
         mv /tmp/usbdebug-umount /tmp/UsbDebug.umount
         mv /tmp/UsbDebug.tmp /tmp/UsbDebug.log \
-        && pstree -p > /tmp/UsbDebug.pstree
+        && pstree -p > /tmp/UsbDebug.pstree \
+        && grep -E -o '/proc/[^ ]*' /tmp/UsbDebug.log | xargs ls -ld > /tmp/UsbDebug.ls
         pngshow /usr/local/UsbDebug/sadface.png
         sleep 1
         pngshow /usr/local/UsbDebug/sadface.png
