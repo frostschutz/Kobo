@@ -21,9 +21,9 @@ mkdir /tmp/ScreenSaver || exit
 PATH="/usr/local/ScreenSaver:$PATH"
 
 uninstall_check() {
-    if [ -e /mnt/onboard/.ScreenSaver/uninstall ]
+    if [ -e /mnt/onboard/.addons/screensaver/uninstall ]
     then
-        cd /mnt/onboard/.ScreenSaver
+        cd /mnt/onboard/.addons/screensaver
         mv uninstall uninstalled-$(date +%Y%m%d-%H%M)
         rm -f /etc/udev/rules.d/screensaver.rules
         rm -rf /usr/local/ScreenSaver
@@ -52,7 +52,7 @@ do
 
     # End of 3.15.0 workaround
 
-    cd /mnt/onboard/.ScreenSaver || exit
+    cd /mnt/onboard/.addons/screensaver || exit
 
     uninstall_check
 
