@@ -37,16 +37,28 @@ then
     mv /usr/local/ScreenSaver/screensaver.cfg "$CONFIGFILE".$(date +%Y%m%d-%H%M)
 fi
 
+install_symlink() {
+    if [ "$(readlink /sbin/dd)" != "/usr/local/ScreenSaver/dd.sh" ]
+    then
+        rm /sbin/dd
+        ln -s /usr/local/ScreenSaver/dd.sh /sbin/dd
+    fi
+}
+
+uninstall_symlink() {
+    if [ "$(readlink /sbin/dd)" = "/usr/local/ScreenSaver/dd.sh" ]
+    then
+        rm /sbin/dd
+    fi
+}
+
 uninstall_check() {
     if [ "$(config uninstall 0)" = "1" ]
     then
         mkdir -p /mnt/onboard/.addons/screensaver/uninstalled-$(date +%Y%m%d-%H%M)
         rm -f /etc/udev/rules.d/screensaver.rules
         rm -rf /usr/local/ScreenSaver
-        if [ "$(readlink /sbin/dd)" = "/usr/local/ScreenSaver/dd.sh" ]
-        then
-            rm /sbin/dd
-        fi
+        uninstall_symlink
         exit
     fi
 }
@@ -55,9 +67,12 @@ uninstall_check
 
 if [ "$(config method)" = "scanline" ]
 then
-    rm /sbin/dd
-    ln -s /usr/local/ScreenSaver/dd.sh /sbin/dd
-elif [ "$(config method logread)" = "logread" ]
+    install_symlink
+else
+    uninstall_symlink
+fi
+
+if [ "$(config method logread)" = "logread" ]
 then
     exec /usr/local/ScreenSaver/logread.sh
 fi
