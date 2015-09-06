@@ -82,7 +82,7 @@ cd /mnt/onboard/.addons/screensaver || exit
 rnd="$RANDOM$RANDOM$RANDOM"
 set -- *.png
 file="$(eval 'echo "${'$((1 + $rnd % $#))'}"')"
-set -- poweroff/*.png
+set -- off/*.png
 powerfile="$(eval 'echo "${'$((1 + $rnd % $#))'}"')"
 
 cat "$file" > /dev/null &
