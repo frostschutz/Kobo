@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# called by /sbin/dd -> /usr/local/ScreenSaver/dd.sh
+
 PATH="/usr/local/ScreenSaver:$PATH"
 CONFIGFILE="/mnt/onboard/.addons/screensaver/screensaver.cfg"
 
@@ -72,11 +74,13 @@ pattern() {
              -e 's/w{5}w*/W/g' -e 's/b{5}b*/B/g'
 }
 
-pattern $(config offset)
+offset=$(config offset 1)
+pattern=$(pattern $offset)
 
 if [ "$(config debug 0)" == "1" ]
 then
-    draw
+    draw $offset
+    echo $pattern >> /mnt/onboard/.addons/screensaver/scanline.txt
 fi
 
 # hexdump -v -e '1088/2 "%04x " "\n"' -n $((1088*2*1440)) < /dev/fb0 | sed -r -e 's@0000 @X@g' -e 's@[0-9a-f]{4} ?@ @g' -e 's@........$@@' > /mnt/onboard/.ScreenSaver/hexdump.txt

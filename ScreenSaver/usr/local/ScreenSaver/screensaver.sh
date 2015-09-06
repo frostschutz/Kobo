@@ -16,21 +16,48 @@ done
 # udev might call twice
 mkdir /tmp/ScreenSaver || exit
 
-# ScreenSaver by waiting for syslog event
-
 PATH="/usr/local/ScreenSaver:$PATH"
+CONFIGFILE="/mnt/onboard/.addons/screensaver/screensaver.cfg"
+
+#
+# configuration
+#
+config() {
+    local value
+    value=$(grep "^$1=" "$CONFIGFILE")
+    value="${value:$((1+${#1}))}"
+    [ "$value" != "" ] && echo "$value" || echo "$2"
+}
+
+
+# install default config file
+if [ -e /usr/local/ScreenSaver/screensaver.cfg ]
+then
+    mv -n /usr/local/ScreenSaver/screensaver.cfg "$CONFIGFILE"
+    mv /usr/local/ScreenSaver/screensaver.cfg "$CONFIGFILE".$(date +%Y%m%d-%H%M)
+fi
 
 uninstall_check() {
-    if [ -e /mnt/onboard/.addons/screensaver/uninstall ]
+    if [ "$(config uninstall 0)" = "1" ]
     then
-        cd /mnt/onboard/.addons/screensaver
-        mv uninstall uninstalled-$(date +%Y%m%d-%H%M)
+        mkdir -p /mnt/onboard/.addons/screensaver/uninstalled-$(date +%Y%m%d-%H%M)
         rm -f /etc/udev/rules.d/screensaver.rules
         rm -rf /usr/local/ScreenSaver
+        if [ "$(readlink /sbin/dd)" = "/usr/local/ScreenSaver/dd.sh" ]
+        then
+            rm /sbin/dd
+        fi
         exit
     fi
 }
 
 uninstall_check
 
-rmdir /tmp/ScreenSaver
+if [ "$(config method)" = "scanline" ]
+then
+    rm /sbin/dd
+    ln -s /usr/local/ScreenSaver/dd.sh /sbin/dd
+elif [ "$(config method logread)" = "logread" ]
+then
+    exec /usr/local/ScreenSaver/logread.sh
+fi
