@@ -1,6 +1,17 @@
 #!/bin/sh
 
 PATH="/usr/local/ScreenSaver:$PATH"
+CONFIGFILE="/mnt/onboard/.addons/screensaver/screensaver.cfg"
+
+#
+# configuration
+#
+config() {
+    local value
+    value=$(grep "^$1=" "$CONFIGFILE")
+    value="${value:$((1+${#1}))}"
+    [ "$value" != "" ] && echo "$value" || echo "$2"
+}
 
 #
 # avoid calling the hook
@@ -61,8 +72,11 @@ pattern() {
              -e 's/w{5}w*/W/g' -e 's/b{5}b*/B/g'
 }
 
-pattern 1334
-#draw 650
-# draw 1334
+pattern $(config offset)
+
+if [ "$(config debug 0)" == "1" ]
+then
+    draw
+fi
 
 # hexdump -v -e '1088/2 "%04x " "\n"' -n $((1088*2*1440)) < /dev/fb0 | sed -r -e 's@0000 @X@g' -e 's@[0-9a-f]{4} ?@ @g' -e 's@........$@@' > /mnt/onboard/.ScreenSaver/hexdump.txt
