@@ -1,15 +1,23 @@
 #!/bin/sh
 
 PATH="/usr/local/ScreenSaver:$PATH"
+CONFIGFILE="/mnt/onboard/.addons/screensaver/screensaver.cfg"
 
-# 3.15.0 workaround: IconPowerView message no longer appears, instead we get this:
-# nickel: QWidget(0x5d84d8, name = "infoContainer") does not have a property named
+#
+# configuration
+#
+config() {
+    local value
+    value=$(grep "^$1=" "$CONFIGFILE")
+    value="${value:$((1+${#1}))}"
+    [ "$value" != "" ] && echo "$value" || echo "$2"
+}
 
-oldtimestamp=""
+pattern=$(config pattern)
 
-logread -f | stdbuf -oL grep -E '>>> IconPowerView|nickel: QWidget.*"infoContainer".*does not have' | while read month day hour line
+logread -f | stdbuf -oL grep -E "$pattern" | while read month day hour line
 do
-    # QWidget message is noisy.
+    # Log message is noisy.
     timestamp="$month$day$hour"
 
     if [ "$line" = "" -o "$timestamp" = "$oldtimestamp" ]
@@ -19,24 +27,20 @@ do
 
     oldtimestamp="$timestamp"
 
-    # End of 3.15.0 workaround
-
     cd /mnt/onboard/.addons/screensaver || exit
-
-    uninstall_check
 
     # show random picture
     set -- *.png
     rnd="$RANDOM$RANDOM$RANDOM"
     file="$(eval 'echo "${'$((1 + $rnd % $#))'}"')"
 
-    (
+    for delay in $(config delay 0)
+    do
+        sleep $delay
         pngshow "$file" &
-        sleep 0.6
-        pngshow "$file" &
-        sleep 0.6
-        pngshow "$file"
-    ) &
+    done
+
+    wait
 
     cd /
 done
