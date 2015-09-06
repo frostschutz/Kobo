@@ -75,6 +75,23 @@ pattern() {
 
 offset=$(config offset 1)
 debug=$(config debug 0)
+standby=$(config standby)
+poweroff=$(config poweroff)
+
+cd /mnt/onboard/.addons/screensaver || exit
+rnd="$RANDOM$RANDOM$RANDOM"
+set -- *.png
+file="$(eval 'echo "${'$((1 + $rnd % $#))'}"')"
+set -- poweroff/*.png
+powerfile="$(eval 'echo "${'$((1 + $rnd % $#))'}"')"
+
+cat "$file" > /dev/null &
+cat "$powerfile" > /dev/null &
+
+if [ ! -e "$powerfile" ]
+then
+    powerfile="$file"
+fi
 
 for delay in $(config delay 0)
 do
@@ -84,11 +101,13 @@ do
 
     if [ "$debug" == "1" ]
     then
-        draw $offset
-        echo $pattern >> /mnt/onboard/.addons/screensaver/scanline.txt
+        echo [ $(date) ] $pattern >> /mnt/onboard/.addons/screensaver/scanline.txt
+        draw $offset &
+    elif [ "$pattern" = "$standby" ]
+    then
+        pngshow "$file" &
+    elif [ "$pattern" = "$poweroff" ]
+    then
+        pngshow "$powerfile" &
     fi
-
-    # pngshow here
 done
-
-# hexdump -v -e '1088/2 "%04x " "\n"' -n $((1088*2*1440)) < /dev/fb0 | sed -r -e 's@0000 @X@g' -e 's@[0-9a-f]{4} ?@ @g' -e 's@........$@@' > /mnt/onboard/.ScreenSaver/hexdump.txt
