@@ -49,14 +49,8 @@ geometry() {
 draw() {
     offset=$1
 
-    geometry
-
-    if [ "$offset" -gt 0 ]
-    then
-        dd bs="$linebs" seek=$(($offset-1)) count=3 if=/dev/zero of=/dev/fb0
-    fi
-
-    tr '\x00' '\xff' < /dev/zero | dd bs="$linebs" seek="$offset" count=1 of=/dev/fb0
+    dd bs="$linebs" seek=$(($offset-1)) count=1 if=/dev/urandom of=/dev/fb0
+    dd bs="$linebs" seek=$(($offset+1)) count=1 if=/dev/urandom of=/dev/fb0
 
     refresh
 }
@@ -67,20 +61,34 @@ draw() {
 pattern() {
     offset=$1
 
-    geometry
-
+    set -- $(
     hexdump -v -e $line'/2 "%04x " "\n"' -s $(($linebs*$offset)) -n $widthbs /dev/fb0 \
-    | sed -r -e 's/  */ /g' -e 's/[0-7][0-9a-f]{3} /b/g' -e 's/[0-9a-f]{4} /w/g' \
-             -e 's/w{5}w*/W/g' -e 's/b{5}b*/B/g'
+    | md5sum
+    )
+
+    echo "$1"
+
+    # visual pattern:
+    #    | sed -r -e 's/  */ /g' -e 's/[0-7][0-9a-f]{3} /b/g' -e 's/[0-9a-f]{4} /w/g' \
+    #             -e 's/w{5}w*/W/g' -e 's/b{5}b*/B/g'
 }
 
 offset=$(config offset 1)
-pattern=$(pattern $offset)
+debug=$(config debug 0)
 
-if [ "$(config debug 0)" == "1" ]
-then
-    draw $offset
-    echo $pattern >> /mnt/onboard/.addons/screensaver/scanline.txt
-fi
+for delay in $(config delay 0)
+do
+    sleep $delay
+    geometry
+    pattern=$(pattern $offset)
+
+    if [ "$debug" == "1" ]
+    then
+        draw $offset
+        echo $pattern >> /mnt/onboard/.addons/screensaver/scanline.txt
+    fi
+
+    # pngshow here
+done
 
 # hexdump -v -e '1088/2 "%04x " "\n"' -n $((1088*2*1440)) < /dev/fb0 | sed -r -e 's@0000 @X@g' -e 's@[0-9a-f]{4} ?@ @g' -e 's@........$@@' > /mnt/onboard/.ScreenSaver/hexdump.txt
