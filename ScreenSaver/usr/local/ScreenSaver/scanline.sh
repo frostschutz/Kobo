@@ -47,7 +47,7 @@ geometry() {
 # visualize the scanline
 #
 draw() {
-    offset=$1
+    offset=$((height-$1))
 
     dd bs="$linebs" seek=$(($offset-1)) count=1 if=/dev/urandom of=/dev/fb0
     dd bs="$linebs" seek=$(($offset+1)) count=1 if=/dev/urandom of=/dev/fb0
@@ -59,7 +59,7 @@ draw() {
 # grab the pattern
 #
 pattern() {
-    offset=$1
+    offset=$(($height-$1))
 
     set -- $(
     hexdump -v -e $line'/2 "%04x " "\n"' -s $(($linebs*$offset)) -n $widthbs /dev/fb0 \
