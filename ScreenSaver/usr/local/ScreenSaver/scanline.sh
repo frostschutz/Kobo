@@ -85,8 +85,8 @@ file="$(eval 'echo "${'$((1 + $rnd % $#))'}"')"
 set -- off/*.png
 powerfile="$(eval 'echo "${'$((1 + $rnd % $#))'}"')"
 
-cat "$file" > /dev/null &
-cat "$powerfile" > /dev/null &
+# optimistic caching
+cat "$powerfile" "$file" > /dev/null &
 
 if [ ! -e "$powerfile" ]
 then
@@ -105,9 +105,11 @@ do
         draw $offset &
     elif [ "$pattern" = "$standby" ]
     then
+        wait # for pngshow
         pngshow "$file" &
     elif [ "$pattern" = "$poweroff" ]
     then
+        wait # for pngshow
         pngshow "$powerfile" &
     fi
 done
