@@ -10,7 +10,7 @@ CONFIGFILE="/mnt/onboard/.addons/screensaver/screensaver.cfg"
 #
 config() {
     local value
-    value=$(grep "^$1=" "$CONFIGFILE")
+    value=$(grep -m 1 "^$1=" "$CONFIGFILE")
     value="${value:$((1+${#1}))}"
     [ "$value" != "" ] && echo "$value" || echo "$2"
 }
