@@ -34,13 +34,12 @@ do
     rnd="$RANDOM$RANDOM$RANDOM"
     file="$(eval 'echo "${'$((1 + $rnd % $#))'}"')"
 
+    cd /
+
     for delay in $(config delay 0)
     do
         sleep $delay
-        pngshow "$file" &
+        wait
+        pngshow /mnt/onboard/.addons/screensaver/"$file" &
     done
-
-    wait
-
-    cd /
 done
