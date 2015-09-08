@@ -95,6 +95,7 @@ fi
 
 if [ "$debug" == "1" ]
 then
+    geometry
     echo -------- >> /mnt/onboard/.addons/screensaver/scanline.txt
     oldpattern=""
     for i in $(seq 1 1000)
