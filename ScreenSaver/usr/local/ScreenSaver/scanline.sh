@@ -93,17 +93,33 @@ then
     powerfile="$file"
 fi
 
+if [ "$debug" == "1" ]
+then
+    echo -------- >> /mnt/onboard/.addons/screensaver/scanline.txt
+    oldpattern=""
+    for i in $(seq 1 1000)
+    do
+       curpattern=$(pattern $offset) 
+
+       if [ "$curpattern" != "$oldpattern" ]
+       then
+           echo [ $(date) ] $curpattern >> /mnt/onboard/.addons/screensaver/scanline.txt
+           oldpattern="$curpattern"
+           draw $offset &
+       fi
+       sleep 0.05
+    done
+
+    exit
+fi
+
 for delay in $(config delay 0)
 do
     sleep $delay
     geometry
     pattern=$(pattern $offset)
 
-    if [ "$debug" == "1" ]
-    then
-        echo [ $(date) ] $pattern >> /mnt/onboard/.addons/screensaver/scanline.txt
-        draw $offset &
-    elif [ "$pattern" = "$standby" ]
+    if [ "$pattern" = "$standby" ]
     then
         wait # for pngshow
         pngshow "$file" &
