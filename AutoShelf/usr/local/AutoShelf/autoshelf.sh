@@ -197,62 +197,6 @@ COMMIT TRANSACTION;
 "
 }
 
-old_autoshelf() {
-    echo "PRAGMA synchronous = OFF;"
-    echo "PRAGMA journal_mode = MEMORY;"
-    echo "BEGIN TRANSACTION;"
-
-    echo "DELETE FROM Shelf WHERE InternalName LIKE '%/';"
-    echo "DELETE FROM ShelfContent WHERE ShelfName LIKE '%/';"
-
-    local i=0
-
-    if [ "$(config uninstall 0)" == "1" ]
-    then
-        echo "DELETE FROM Activity WHERE Type='Shelf' AND Id LIKE '%/';"
-        echo "END TRANSACTION;"
-        return
-    fi
-
-    sqlite3 /mnt/onboard/.kobo/KoboReader.sqlite "
-    SELECT ContentID FROM content
-    WHERE ContentType = 6
-      AND ContentID LIKE 'file:///mnt/%'
-    ORDER BY ContentID
-    ;" | while read file
-    do
-        i=$(($i+1))
-        date="strftime('%Y-%m-%dT%H:%M:%SZ','now','-$i minute')"
-        file=$(echo "$file" | sed -e "s@'@''@g")
-        shelf=$(dirname "$file" | sed -r -e 's@^file://*mnt//*(onboard|sd)/*@@')
-        word=$(basename "$file")
-        for number in $word; do break; done
-
-        if [ "$shelf" == "" ]
-        then
-            series="$word"
-        else
-            series="$shelf"
-        fi
-
-        if [ "$shelf" != "$prevshelf" ]
-        then
-            prevshelf="$shelf"
-            echo "REPLACE INTO Shelf VALUES($date,'$shelf/','$shelf/',$date,'$shelf/',NULL,'false','true','false');"
-        fi
-
-        echo "INSERT INTO ShelfContent VALUES('$shelf/','$file',$date,'false','false');"
-
-        echo "
-        UPDATE content
-        SET Series='$series', SeriesNumber='$number'
-        WHERE ContentID='$file'
-        ;"
-    done
-
-    echo "END TRANSACTION;"
-}
-
 udev_workarounds
 
 if [ "$ACTION" == "add" ]
