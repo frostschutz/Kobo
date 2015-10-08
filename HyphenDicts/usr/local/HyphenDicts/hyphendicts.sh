@@ -4,13 +4,13 @@ mkdir /tmp/HyphenDicts || exit
 
 for i in 1 2 3 4 5
 do
-    if [ ! -e "/mnt/onboard/.addons/hyphendicts/ ]
+    if [ ! -e "/mnt/onboard/.addons/hyphendicts/" ]
     then
         sleep 2.$RANDOM
     fi
 done
 
-if [ ! -e "/mnt/onboard/.addons/hyphendicts/ ]
+if [ ! -e "/mnt/onboard/.addons/hyphendicts/" ]
 then
     exit
 fi
@@ -37,19 +37,19 @@ done
 for dic in /mnt/onboard/.addons/hyphendicts/hyph_??_??.dic
 do
     basedic=$(basename "$dic")
-    alphadic=/usr/share/hyphen/"$basedic"
-    betadic=/usr/local/Kobo/hyphenDicts/${basedic:0:7}.dic
+    alphadic=/usr/local/Kobo/hyphenDicts/${basedic:0:7}.dic
+    betadic=/usr/share/hyphen/"$basedic"
 
-    if [ $(readlink -f "$alphadic") != "$dic" ]
+    if [ "$(readlink -f "$alphadic")" != "$dic" ]
     then
         rm "$alphadic"
         ln -s "$dic" "$alphadic"
     fi
 
-    if [ $(readlink -f "$betadic") != "$dic" ]
+    if [ "$(readlink -f "$betadic")" != "$dic" ]
     then
         rm "$betadic"
-        ln -s "$dic" "$alphadic"
+        ln -s "$alphadic" "$betadic"
     fi
 
     # uninstall?
