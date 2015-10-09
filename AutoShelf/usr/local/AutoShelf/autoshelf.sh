@@ -69,7 +69,7 @@ autoshelf() {
     cfg_unique_book=$(config unique_book 1)
     cfg_uninstall=$(config uninstall 0)
 
-    today="strftime('%Y-%m-%dT%H:%M:%SZ')"
+    today="strftime('%Y-%m-%dT%H:%M:%f')"
 
     echo "
 PRAGMA synchronous = OFF;
@@ -94,6 +94,7 @@ CREATE UNIQUE INDEX autoshelfcontent_id ON AutoShelfContent(ContentId);
 REPLACE INTO AutoShelf SELECT * FROM Shelf WHERE _IsDeleted!='true';
 REPLACE INTO AutoShelfContent SELECT * FROM ShelfContent WHERE _IsDeleted!='true';
 
+DELETE FROM ShelfContent WHERE _IsSynced!='true';
 UPDATE Shelf SET LastModified=$today, _IsDeleted='true';
 UPDATE ShelfContent SET DateModified=$today, _IsDeleted='true';
 "
