@@ -45,6 +45,11 @@ http://www.mobileread.com/forums/showthread.php?t=262353
 Add support for ext2/3/4 filesystems for USB and SD storage.
 http://www.mobileread.com/forums/showthread.php?p=3003110#post3003110
 
+- fatpatch -
+
+Kobo <-> Win10 compatibility hack.
+http://www.mobileread.com/forums/showthread.php?p=3367786#post3367786
+
 - pngshow -
 
 A program that draws PNG image data on the display, regardless of rotation.

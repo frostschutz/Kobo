@@ -1,0 +1,1 @@
+KERNEL=="loop0", RUN+="/fatpatch/fatpatch.sh"
