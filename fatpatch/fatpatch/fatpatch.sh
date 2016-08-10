@@ -68,7 +68,7 @@ else
     black
     for sector in 0 1 2 3 4 5 6 7
     do
-        fat32 "$sector" && dd bs=1 seek=$((90+512*"$sector")) count=420 if=/fatpatch/backup"$sector".bin of="$TARGET"
+        fat32 "$sector" && dd bs=1 seek=$((90+512*$sector)) count=420 if=/fatpatch/backup"$sector".bin of="$TARGET"
         sync
     done
     sleep 10
