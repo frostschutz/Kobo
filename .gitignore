@@ -14,3 +14,4 @@ usr/local/Kobo/*
 mxcfb.h
 multipart_pipe
 httpd_preload.so
+goink/goink
