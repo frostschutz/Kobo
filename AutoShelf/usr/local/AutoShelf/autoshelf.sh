@@ -123,7 +123,7 @@ UPDATE AutoShelfContent SET DateModified=$today, _IsDeleted='true' WHERE ShelfNa
     while [ ${#cfg_skip} -gt 0 ]
     do
         # cut off first path element
-        skip=${cfg_skip#%%:*}
+        skip=${cfg_skip%%:*}
         cfg_skip=${cfg_skip:$((${#skip}+1))}
         consume="$consume AND ContentID NOT LIKE 'file://$(like "$skip")/%' ESCAPE '\\'"
     done
