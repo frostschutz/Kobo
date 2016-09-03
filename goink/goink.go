@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"syscall"
 	"unsafe"
 )
@@ -60,4 +61,13 @@ func main() {
 
 	err = ioctl(fb0.Fd(), MXCFB_SEND_UPDATE, unsafe.Pointer(&update))
 	panic("mxcfb_send_update", err)
+
+	var memstats runtime.MemStats
+	runtime.ReadMemStats(&memstats)
+	fmt.Println("Alloc", memstats.Alloc)
+	fmt.Println("TotalAlloc", memstats.TotalAlloc)
+	fmt.Println("Sys", memstats.Sys)
+	fmt.Println("Lookups", memstats.Lookups)
+	fmt.Println("Mallocs", memstats.Mallocs)
+	fmt.Println("Frees", memstats.Frees)
 }

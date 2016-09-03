@@ -1,3 +1,5 @@
+// +build linux,arm
+
 // defs2go fb.h
 // CC=arm-gcc GOOS=linux GOARCH=arm cgo -godefs
 

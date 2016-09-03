@@ -1,3 +1,5 @@
+// +build linux,arm
+
 // defs2go mxcfb.h
 // CC=arm-gcc GOOS=linux GOARCH=arm cgo -godefs
 
