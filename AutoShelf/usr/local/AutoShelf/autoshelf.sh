@@ -1,7 +1,8 @@
 #!/bin/sh
 
 PATH="/usr/local/AutoShelf":"$PATH"
-CONFIGFILE="/mnt/onboard/.addons/autoshelf/autoshelf.cfg"
+BASE="/mnt/onboard/.addons/autoshelf"
+CONFIGFILE="$BASE/autoshelf.cfg"
 
 #
 # configuration
@@ -60,16 +61,31 @@ resume_nickel() {
 
 autoshelf() {
     # variables from configuration file, if present
-    cfg_path=$(config path /mnt/onboard:/mnt/sd)
-    cfg_skip=$(config skip /mnt/onboard/.kobo)
-    cfg_consume=$(config consume 1)
-    cfg_series=$(config series 1)
+    cfg_path=$(config path '/mnt/onboard:/mnt/sd')
+    cfg_skip=$(config skip '/mnt/onboard/.kobo')
+    cfg_consume=$(config consume '1')
+    cfg_series=$(config series '1')
     cfg_series_regexp=$(config series_regexp '#([^/]+)/([0-9.]+)#:\1:\2:#')
-    cfg_exclusive=$(config exclusive 0)
-    cfg_unique_book=$(config unique_book 1)
-    cfg_uninstall=$(config uninstall 0)
+    cfg_exclusive=$(config exclusive '0')
+    cfg_unique_book=$(config unique_book '1')
+    cfg_uninstall=$(config uninstall '0')
 
     today="strftime('%Y-%m-%dT%H:%M:%f')"
+
+    echo "
+/* --
+   -- path = '$cfg_path'
+   -- skip = '$cfg_skip'
+   -- consume = '$cfg_consume'
+   -- series = '$cfg_series'
+   -- series_regexp = '$cfg_series_regexp'
+   -- exclusive = '$cfg_exclusive'
+   -- unique_book = '$cfg_unique_book'
+   -- uninstall = '$cfg_uninstall'
+   -- logfile = '$cfg_logfile'
+   --
+   -- */
+"
 
     echo "
 PRAGMA synchronous = OFF;
@@ -124,8 +140,9 @@ UPDATE AutoShelfContent SET DateModified=$today, _IsDeleted='true' WHERE ShelfNa
     do
         # cut off first path element
         skip=${cfg_skip%%:*}
+        echo "-- skip '$skip'"
         cfg_skip=${cfg_skip:$((${#skip}+1))}
-        consume="$consume AND ContentID NOT LIKE 'file://$(like "$skip")/%' ESCAPE '\\'"
+        consume="$consume AND ContentId NOT LIKE 'file://$(like "$skip")/%' ESCAPE '\\'"
     done
 
     while [ ${#cfg_path} -gt 0 ]
@@ -137,11 +154,13 @@ UPDATE AutoShelfContent SET DateModified=$today, _IsDeleted='true' WHERE ShelfNa
         pathlike=$(like "$path")
         prefix=${this:$((${#path}+1))}
 
+        echo "-- path '$path' prefix '$prefix'"
+
         sqlite3 /mnt/onboard/.kobo/KoboReader.sqlite "
-            SELECT ContentID FROM content
-            WHERE ContentType = 6 AND ContentID LIKE 'file://$pathlike/%' ESCAPE '\\' $consume
-            ORDER BY ContentID
-        ;" | while read file
+SELECT ContentId FROM content
+WHERE ContentType=6 AND ContentId LIKE 'file://$pathlike/%' ESCAPE '\\' $consume
+ORDER BY ContentId;
+        " | tee -a "$cfg_logfile" | while read file
         do
             escapefile=$(escape "$file")
             base=${file:$((8+${#path}))}
@@ -154,18 +173,23 @@ UPDATE AutoShelfContent SET DateModified=$today, _IsDeleted='true' WHERE ShelfNa
                 prevshelf="$shelf"
                 escapeshelf=$(escape "$shelf")
                 echo "
-UPDATE OR IGNORE AutoShelf SET LastModified=$today, _IsDeleted='false', _IsVisible='true' WHERE InternalName='$escapeshelf/';
-INSERT OR IGNORE INTO AutoShelf VALUES ($today, '$escapeshelf/','$escapeshelf/',$today,'$escapeshelf/',NULL,'false','true','false');
+UPDATE OR IGNORE AutoShelf
+SET LastModified=$today, _IsDeleted='false', _IsVisible='true'
+WHERE InternalName='$escapeshelf/';
+INSERT OR IGNORE INTO AutoShelf ('CreationDate','Id','InternalName','LastModified','Name','Type','_IsDeleted','_IsVisible','_IsSynced')
+VALUES ($today, '$escapeshelf/','$escapeshelf/',$today,'$escapeshelf/',NULL,'false','true','false');
 "
             fi
 
             echo "
-REPLACE INTO AutoShelfContent VALUES ('$escapeshelf/', '$escapefile', $today, 'false', 'false');
+REPLACE INTO AutoShelfContent ('ShelfName','ContentId','DateModified','_IsDeleted','_IsSynced')
+VALUES ('$escapeshelf/', '$escapefile', $today, 'false', 'false');
 "
 
             if [ "$cfg_series" == "1" ]
             then
                 result=$(echo -n "$base" | sed -r -e s"$cfg_series_regexp")
+                echo "-- series_regexp '$base' -> '$result'"
 
                 if [ "$result" != "$base" ]
                 then
@@ -175,16 +199,18 @@ REPLACE INTO AutoShelfContent VALUES ('$escapeshelf/', '$escapefile', $today, 'f
                     result=${result:$((${#series}+1))}
                     number=${result%%:*}
 
-                    echo "UPDATE content
-                          SET Series='$(escape "$series")', SeriesNumber='$(escape "$number")'
-                          WHERE ContentID='$escapefile';"
+                    echo "
+UPDATE content
+SET Series='$(escape "$series")', SeriesNumber='$(escape "$number")'
+WHERE ContentId='$escapefile';
+"
                 fi
             fi
         done
 
         if [ "$cfg_consume" == "1" ]
         then
-            consume="$consume AND ContentID NOT LIKE 'file://$pathlike/%' ESCAPE '\\'"
+            consume="$consume AND ContentId NOT LIKE 'file://$pathlike/%' ESCAPE '\\'"
         fi
     done
 
@@ -255,11 +281,19 @@ done
 
 if [ -e /mnt/onboard/.kobo/KoboReader.sqlite ]
 then
+    cfg_logfile="$BASE"/$(config logfile '')
+    echo "-------- AutoShelf $(date) --------" | tee -a "$cfg_logfile"
     autoshelf > /tmp/autoshelf.sql
-    cat /tmp/autoshelf.sql | sqlite3 -bail -batch -echo /mnt/onboard/.kobo/KoboReader.sqlite >& /tmp/autoshelf-sql.execution
+    echo "---- SQL Execution: ----" | tee -a "$cfg_logfile"
+    (
+        sqlite3 -bail -batch -echo /mnt/onboard/.kobo/KoboReader.sqlite < /tmp/autoshelf.sql \
+        || (echo "---- Dump after error: ----"; cat /tmp/autoshelf.sql)
+    ) 2>&1 | tee -a "$cfg_logfile"
+    rm /tmp/autoshelf.sql
 
     if [ "$(config uninstall 0)" == "1" ]
     then
+        echo "==== Uninstalling ====" | tee -a "$cfg_logfile"
         touch /mnt/onboard/.addons/autoshelf/uninstalled-$(date +%Y%M%d-%H%M)
         rm /etc/udev/rules.d/autoshelf.rules
         rm -rf /usr/local/AutoShelf
