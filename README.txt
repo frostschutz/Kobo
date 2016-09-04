@@ -12,8 +12,8 @@ http://www.mobileread.com/forums/showthread.php?t=254554
 
 - HyphenDicts -
 
-Move all hyphenation dictionaries to USB storage /.hyph/ for editing.
-http://www.mobileread.com/forums/showthread.php?p=3004080#post3004080
+Move all hyphenation dictionaries to USB storage /.addons/hyphendicts/ for editing.
+http://www.mobileread.com/forums/showthread.php?t=266005
 
 - MagicMemory - 
 
