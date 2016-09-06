@@ -15,3 +15,5 @@ mxcfb.h
 multipart_pipe
 httpd_preload.so
 goink/goink
+inotifywait
+libinotifytools.*

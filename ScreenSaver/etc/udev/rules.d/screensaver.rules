@@ -1,1 +1,2 @@
 KERNEL=="loop0", ACTION=="add", RUN+="/usr/local/ScreenSaver/screensaver.sh"
+KERNEL=="fsl-usb2-udc", ACTION=="remove", SUBSYSTEM=="drivers", RUN+="/usr/local/ScreenSaver/screensaver.sh"
