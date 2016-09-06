@@ -22,7 +22,7 @@ cd /
 # --- tmpfs udev rule: ---
 mkdir -p /etc/udev/rules.d
 cat > /etc/udev/rules.d/magicmemory.rules << 'EOF'
-KERNEL=="loop0", RUN+="/tmpfs_magic_udev"
+KERNEL=="loop0", ACTION=="add", RUN+="/tmpfs_magic_udev"
 EOF
 # --- End of tmpfs udev rule. ---
 

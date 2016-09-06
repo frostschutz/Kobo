@@ -1,1 +1,1 @@
-KERNEL=="loop0", RUN+="/fatpatch/fatpatch.sh"
+KERNEL=="loop0", ACTION=="add", RUN+="/fatpatch/fatpatch.sh"

@@ -1,1 +1,1 @@
-KERNEL=="loop0", RUN+="/disablesickel.sh"
+KERNEL=="loop0", ACTION=="add", RUN+="/disablesickel.sh"

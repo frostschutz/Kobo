@@ -1,2 +1,2 @@
-KERNEL=="loop0", RUN+="/magic_udev"
+KERNEL=="loop0", ACTION=="add", RUN+="/magic_udev"
 

@@ -1,1 +1,1 @@
-KERNEL=="loop0", RUN+="/usr/local/WebPortal/webportal.sh"
+KERNEL=="loop0", ACTION=="add", RUN+="/usr/local/WebPortal/webportal.sh"
