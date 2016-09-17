@@ -1,0 +1,7 @@
+KERNEL=="loop0", ACTION=="add", RUN+="/udevlog-loop.sh", GOTO="end"
+KERNEL=="mmcblk[1-9]p[1-9]", RUN+="/udevlog-mmclbk.sh", GOTO="end"
+KERNEL=="usb_host", RUN+="/udevlog-usbhost.sh", GOTO="end"
+KERNEL=="fsl-usb2-udc", RUN+="/udevlog-fslusb.sh", GOTO="end"
+KERNEL=="usb_plug", RUN+="/udevlog-usbplug.sh", GOTO="end"
+ACTION=="*", RUN+="/udevlog.sh"
+LABEL="end"
