@@ -231,13 +231,13 @@ then
     # prompt mode
     OFF=1
     rm /tmp/autoshelf-on
+    sleep 2
+    grep /mnt/onboard /proc/mounts && exit
+    pngshow "/usr/local/AutoShelf/autoshelf-off.png"
 
     while cat /dev/input/event1 | dd bs=1 count=1
     do
-        if [ -e /mnt/onboard/.kobo ]
-        then
-            exit
-        fi
+        grep /mnt/onboard /proc/mounts && exit
 
         if [ "$OFF" == "1" ]
         then
