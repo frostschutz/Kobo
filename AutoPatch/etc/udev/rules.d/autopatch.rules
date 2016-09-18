@@ -1,1 +1,1 @@
-KERNEL=="fsl-usb2-udc", ACTION=="remove", RUN+="/usr/local/AutoPatch/autopatch.sh"
+SUBSYSTEM=="module", DEVPATH=="/module/g_file_storage", ACTION=="remove", RUN+="/usr/local/AutoPatch/autopatch.sh"
