@@ -1,1 +1,1 @@
-KERNEL=="fsl-usb2-udc", ACTION=="remove", RUN+="/usr/local/NickelIcons/nickelicons.sh"
+SUBSYSTEM=="module", DEVPATH=="/module/g_file_storage", ACTION=="remove", RUN+="/usr/local/NickelIcons/nickelicons.sh"
