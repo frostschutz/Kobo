@@ -1,1 +1,1 @@
-KERNEL=="fsl-usb2-udc", SUBSYSTEM=="drivers", RUN+="/usr/local/UsbDebug/usbdebug.sh"
+SUBSYSTEM=="module", DEVPATH=="/module/g_file_storage", RUN+="/usr/local/UsbDebug/usbdebug.sh"
