@@ -1,2 +1,2 @@
 KERNEL=="loop0", ACTION=="add", RUN+="/usr/local/HyphenDicts/hyphendicts.sh"
-KERNEL=="fsl-usb2-udc", ACTION=="remove", RUN+="/usr/local/HyphenDicts/hyphendicts.sh"
+SUBSYSTEM=="module", DEVPATH=="/module/g_file_storage", ACTION=="remove", RUN+="/usr/local/HyphenDicts/hyphendicts.sh"
