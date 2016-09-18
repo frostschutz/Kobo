@@ -62,11 +62,11 @@ then
     do
         if [ -e "/mnt/onboard/.kobo/KoboReader.sqlite" ]
         then
-            mkdir /mnt/onboard/.usbdebug
-            cp /tmp/UsbDebug.* /mnt/onboard/.usbdebug
+            cp /tmp/UsbDebug.* /mnt/onboard/.addons/usbdebug/
 
-            if [ -e /mnt/onboard/.usbdebug/uninstall ]
+            if [ -e /mnt/onboard/.addons/usbdebug/uninstall ]
             then
+                mv /mnt/onboard/.addons/usbdebug/uninstall /mnt/onboard/.addons/usbdebug/uninstalled
                 rm -f /etc/udev/rules.d/usbdebug.rules
                 rm -rf /usr/local/UsbDebug
             fi
