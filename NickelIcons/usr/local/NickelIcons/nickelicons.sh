@@ -18,7 +18,7 @@ do
 done
 
 # uninstall?
-if [ -e /mnt/onboard/.kobo/ -a ! -e /mnt/onboard/.nickelicons ]
+if [ -e /mnt/onboard/.kobo/ -a ! -e /mnt/onboard/.addons/nickelicons ]
 then
     rm -rf /usr/local/NickelIcons /etc/udev/rules.d/nickelicon.rules
     exit
@@ -112,7 +112,7 @@ restore() {
 parse() {
     TARGET="$1"
     base=$(basename "$TARGET")
-    dumpdir="/mnt/onboard/.nickelicons/$base"
+    dumpdir="/mnt/onboard/.addons/nickelicons/$base"
 
     # avoid unnecessary re-runs
     for dumped in "$dumpdir"/*.*
@@ -170,11 +170,11 @@ parse() {
     rmdir "$dumpdir"/invalid
 }
 
-logfile=/mnt/onboard/.nickelicons/report.txt
+logfile=/mnt/onboard/.addons/nickelicons/report.txt
 
 rm -f "$logfile"
 
-strings -n 1 /mnt/onboard/.nickelicons/targets.txt | grep -v ^# | while read target
+strings -n 1 /mnt/onboard/.addons/nickelicons/targets.txt | grep -v ^# | while read target
 do
     if [ -f "$target" ]
     then

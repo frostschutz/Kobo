@@ -1,5 +1,5 @@
 In order to uninstall the Nickel Icons mod,
-simply delete or rename the .nickelicons dir.
+simply delete or rename the .addons/nickelicons dir.
 Uninstalling will not restore the original icons.
 You have to do so manually, before uninstalling,
 by moving the original PNG files into restore/.
