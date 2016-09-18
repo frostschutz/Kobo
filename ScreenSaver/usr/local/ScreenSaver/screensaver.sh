@@ -20,7 +20,7 @@ udev_workarounds() {
 }
 
 wait_for_nickel() {
-    while ! pidof nickel || [ ! -e /mnt/onboard/.kobo ]
+    while ! pidof nickel || ! grep /mnt/onboard /proc/mounts
     do
         sleep 1
     done
@@ -60,17 +60,84 @@ geometry() {
 }
 
 #
-# check for white line
+# force screen refresh
 #
-standby() {
-    [ "$(hexdump -s $(($1*$linebs)) -n $(($widthbs)) -e '1/2 "%04x"' /dev/fb0)" = "ffff*" ]
+refresh() {
+    # I'm too lazy, draw black/white for now.
+    pngshow /usr/local/ScreenSaver/1px-black.png
+    pngshow /usr/local/ScreenSaver/1px-white.png
 }
 
 #
-# check for black line
+# visualize the scanline
 #
-poweroff() {
-    [ "$(hexdump -s $(($1*$linebs)) -n $(($widthbs)) -e '1/2 "%04x"' /dev/fb0)" = "0000*" ]
+scanline_draw() {
+    dd bs="$linebs" seek=$(($1-1)) count=1 if=/dev/urandom of=/dev/fb0
+    dd bs="$linebs" seek=$(($1+1)) count=1 if=/dev/urandom of=/dev/fb0
+    refresh
+}
+
+#
+# grab a line of pixels from the framebuffer
+#
+scanline() {
+    printf "%s" $(hexdump -s $(($1*$linebs)) -n $(($widthbs)) -e '1/2 "%04x"' /dev/fb0)
+}
+
+#
+# automagically detect the standby scanline offset
+#
+scanline_standby() {
+    step=7
+    threshold=$(($height/10))
+    prev=""
+    moste_potente_line=""
+    moste_potente_offset=""
+
+    # ignore first / last 32 lines as some readers have a dead zone
+    # this is slow so check only every $step line, half the work twice the profit
+    for offset in $(seq 32 $step $(($height-32)))
+    do
+        cur=$(scanline $offset)
+
+        if [ "$prev" = "$cur" ]
+        then
+            continue
+        fi
+
+        prev="$cur"
+
+        threshold=$(($threshold-$step))
+
+        if [ "$threshold" -lt "0" ]
+        then
+            # not a standby image
+            return 1
+        fi
+
+        if [ ${#cur} -gt ${#moste_potente_line} ]
+        then
+            # find the most significant line
+            for offset in $(seq $(($offset-$step+1)) $(($offset+$step-1)))
+            do
+                cur=$(scanline $offset)
+
+                if [ ${#cur} -gt ${#moste_potente_line} ]
+                then
+                    moste_potente_line="$cur"
+                    moste_potente_offset="$offset"
+                fi
+            done
+        fi
+    done
+
+    if [ "${#moste_potente_line}" -lt 64 ]
+    then
+        # blank image?
+        return 2
+    fi
+
+    echo "$moste_potente_offset:$moste_potente_line"
 }
 
 #
@@ -82,6 +149,20 @@ randomfile() {
     eval 'echo "$PWD"/"${'$((1 + $RANDOM$RANDOM$RANDOM % $#))'}"'
 }
 
+#
+# uptime in seconds
+#
+uptimesecs() {
+    grep -o '^[0-9]*' /proc/uptime
+}
+
+#
+# file age in seconds
+#
+fileage() {
+    [ -e "$1" ] && echo $(( $(date +%s) - $(stat -c "%Y" "$1") ))
+}
+
 # --- Main: ---
 
 udev_workarounds
@@ -91,8 +172,9 @@ uninstall_check
 while touch "$WATCHFILE"
 do
     inotifywait -e open -e unmount "$WATCHFILE"
+    error=$?
 
-    if [ $? -gt 2 ]
+    if [ $error -gt 2 ]
     then
         # unknown error condition
         break
@@ -106,16 +188,101 @@ do
 
     geometry
 
-    sleep 1
+    cfg_standby=$(config standby "")
 
-    if standby 101 && standby 211 && standby 307 && standby 401 \
-       && standby 151 && standby 251 && standby 353 && standby 457
+    if [ "$cfg_standby" = "" ]
     then
-        pngshow "$(randomfile standby)"
-    elif poweroff 101 && poweroff 211 && poweroff 307 && poweroff 401
-    then
-        pngshow "$(randomfile poweroff)"
+        # autodetect standby scanline
+        for i in $(seq 1 20)
+        do
+            sleep 0.25
+            cfg_standby=$(scanline_standby) || continue
+            # should not reach if poweroff
+            echo "
+#
+# Standby scanline autodetected [$i] $(date)
+#   If this value does not work, remove it so it will be re-detected.
+#
+standby=$cfg_standby
+" >> "$CONFIGFILE"
+            scanline_draw ${cfg_standby%:*}
+            break # scanline
+        done
+        continue # goodbye, maybe showing picture next year
     fi
+
+    cfg_poweroff=$(config poweroff "")
+
+    powerfile="/usr/local/ScreenSaver/poweroff.txt"
+
+    if [ -e "$powerfile" -a $(fileage "$powerfile") -gt $(uptimesecs) ]
+    then
+        cat "$powerfile" >> "$CONFIGFILE"
+        rm "$powerfile"
+        cfg_poweroff=$(config poweroff "")
+    fi
+
+    if [ "$cfg_poweroff" = "" ]
+    then
+        # autodetect poweroff scanline (using standby offset)
+        offset=${cfg_standby%:*}
+
+        for i in $(seq 1 20)
+        do
+            sleep 0.25
+            cur=$(scanline "$offset")
+            [ "$cur" = "$prev" ] && continue
+            prev="$cur"
+            [ "${#cur}" -lt 64 ] && continue
+
+            # Possible candidate:
+            echo "
+#
+# Poweroff scanline autodetected [$i] $(date)
+#   If this value does not work, remove it so it will be re-detected.
+#
+poweroff=$offset:$cur
+" > "$powerfile"
+            scanline_draw $offset &
+        done
+
+        sleep 2
+        wait
+        rm "$powerfile" # should not reach if actually powered off
+        continue
+    fi
+
+    # actually see if we can display an image
+
+    standby=${cfg_standby#*:}
+    standby_offset=${cfg_standby%:*}
+    standbyfile=$(randomfile standby)
+    power=${cfg_poweroff#*:}
+    power_offset=${cfg_poweroff%:*}
+    powerfile=$(randomfile poweroff)
+
+    if [ ! -e "$standbyfile" -a ! -e "$powerfile" ]
+    then
+        # there aren't even any pictures? kill me now.
+        break
+    fi
+
+    for i in $(seq 1 20)
+    do
+        sleep 0.25
+
+        if [ -e "$powerfile" -a "$power" = "$(scanline "$power_offset")" ]
+        then
+            pngshow "$powerfile"
+            break
+        fi
+
+        if [ -e "$standbyfile" -a "$standby" = "$(scanline "$standby_offset")" ]
+        then
+            pngshow "$standbyfile"
+            break
+        fi
+    done
 done
 
 rmdir /tmp/ScreenSaver
