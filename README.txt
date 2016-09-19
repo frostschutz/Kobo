@@ -34,6 +34,11 @@ http://www.mobileread.com/forums/showthread.php?t=255238
 
 Enable telnet and ftp servers. Survives most firmware updates.
 
+- UsbDebug -
+
+Show whether user partition was properly umounted for USB export.
+http://www.mobileread.com/forums/showthread.php?t=263674
+
 - WebPortal - 
 
 A local web server running on the Kobo and the things you can do with it.
