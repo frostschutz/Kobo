@@ -76,7 +76,7 @@ scanline_draw() {
     dd bs="$linebs" seek=$(($1+1)) count=1 if=/dev/urandom of=/dev/fb0
     refresh
 }
-
+P
 #
 # grab a line of pixels from the framebuffer
 #
@@ -88,11 +88,13 @@ scanline() {
 # automagically detect the standby scanline offset
 #
 scanline_standby() {
-    step=7
+    step=5
     threshold=$(($height/10))
     prev=""
     moste_potente_line=""
     moste_potente_offset=""
+
+    checksum="$(md5sum /dev/fb0)"
 
     # ignore first / last 32 lines as some readers have a dead zone
     # this is slow so check only every $step line, half the work twice the profit
@@ -136,6 +138,9 @@ scanline_standby() {
         # blank image?
         return 2
     fi
+
+    # framebuffer changed while scanning?
+    echo "$checksum" | md5sum -c || return 3
 
     echo "$moste_potente_offset:$moste_potente_line"
 }
@@ -192,23 +197,19 @@ do
 
     if [ "$cfg_standby" = "" ]
     then
-        # autodetect standby scanline
-        for i in $(seq 1 20)
-        do
-            sleep 0.25
-            cfg_standby=$(scanline_standby) || continue
-            # should not reach if poweroff
-            echo "
+        sleep 2
+        cfg_standby=$(scanline_standby) || continue
+        # should not reach if poweroff
+        echo "
 #
 # Standby scanline autodetected [$i] $(date)
 #   If this value does not work, remove it so it will be re-detected.
 #
 standby=$cfg_standby
 " >> "$CONFIGFILE"
-            scanline_draw ${cfg_standby%:*}
-            break # scanline
-        done
-        continue # goodbye, maybe showing picture next year
+
+        scanline_draw ${cfg_standby%:*}
+        continue
     fi
 
     cfg_poweroff=$(config poweroff "")
