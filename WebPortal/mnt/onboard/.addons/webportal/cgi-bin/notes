@@ -32,7 +32,7 @@ _parse()
         DATA="${DATA:$((${#FIELD}+1))}"
 
         key="`echo "$FIELD" | cut -d '=' -f 1 | sed -r -e s@[^a-zA-Z0-9_]@_@g`"
-        value="`echo "$FIELD" | cut -s -d '=' -f 2-'`"
+        value="`echo "$FIELD" | cut -s -d '=' -f 2-`"
 
         if [ "$key" != "" ]
         then
