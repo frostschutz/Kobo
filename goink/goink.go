@@ -6,6 +6,12 @@ import (
 	"runtime"
 	"syscall"
 	"unsafe"
+
+	"image"
+	_ "image/jpeg"
+	"image/png"
+
+	"github.com/ev3go/ev3dev/fb" // provides RGB565
 )
 
 func panic(msg string, err error) {
@@ -40,11 +46,32 @@ func main() {
 	fb0map, err := syscall.Mmap(int(fb0.Fd()), 0, int(screensize), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	panic("mmap", err)
 
-	for i := uint32(0); i < screensize; i++ {
-		fb0map[i] = 0
-	}
+	//	for i := uint32(0); i < screensize; i++ {
+	//		fb0map[i] = 0
+	//	}
 
 	// TODO: PNG
+
+	fmt.Println(screen)
+
+	var fb0image = &fb.RGB565{
+		Pix:    fb0map,
+		Stride: int(screen.Xres_virtual) * 2,
+		Rect: image.Rectangle{
+			Min: image.Point{
+				X: 0,
+				Y: 0,
+			},
+
+			Max: image.Point{
+				X: int(screen.Xres),
+				Y: int(screen.Yres),
+			},
+		},
+	}
+
+	out, err := os.Create("converterdTOPNG.png")
+	png.Encode(out, fb0image)
 
 	var update mxcfb_update_data
 
