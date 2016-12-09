@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
+	// "runtime"
 	"syscall"
 	"unsafe"
 
@@ -70,31 +70,34 @@ func main() {
 		},
 	}
 
-	out, err := os.Create("converterdTOPNG.png")
-	png.Encode(out, fb0image)
+	out, err := os.Create("screenshot.png")
+	panic("screenshot", err)
+	x := png.Encoder{png.BestSpeed}
+	x.Encode(out, fb0image)
+	/*
+		var update mxcfb_update_data
 
-	var update mxcfb_update_data
+		update = mxcfb_update_data{
+			Temp:          TEMP_USE_AMBIENT,
+			Update_marker: 0,
+			Update_mode:   UPDATE_MODE_FULL,
+			Update_region: mxcfb_rect{
+				Height: 64,
+				Width:  64,
+			},
+			Waveform_mode: WAVEFORM_MODE_AUTO,
+		}
 
-	update = mxcfb_update_data{
-		Temp:          TEMP_USE_AMBIENT,
-		Update_marker: 0,
-		Update_mode:   UPDATE_MODE_FULL,
-		Update_region: mxcfb_rect{
-			Height: 64,
-			Width:  64,
-		},
-		Waveform_mode: WAVEFORM_MODE_AUTO,
-	}
+		err = ioctl(fb0.Fd(), MXCFB_SEND_UPDATE, unsafe.Pointer(&update))
+		panic("mxcfb_send_update", err)
 
-	err = ioctl(fb0.Fd(), MXCFB_SEND_UPDATE, unsafe.Pointer(&update))
-	panic("mxcfb_send_update", err)
-
-	var memstats runtime.MemStats
-	runtime.ReadMemStats(&memstats)
-	fmt.Println("Alloc", memstats.Alloc)
-	fmt.Println("TotalAlloc", memstats.TotalAlloc)
-	fmt.Println("Sys", memstats.Sys)
-	fmt.Println("Lookups", memstats.Lookups)
-	fmt.Println("Mallocs", memstats.Mallocs)
-	fmt.Println("Frees", memstats.Frees)
+		var memstats runtime.MemStats
+		runtime.ReadMemStats(&memstats)
+		fmt.Println("Alloc", memstats.Alloc)
+		fmt.Println("TotalAlloc", memstats.TotalAlloc)
+		fmt.Println("Sys", memstats.Sys)
+		fmt.Println("Lookups", memstats.Lookups)
+		fmt.Println("Mallocs", memstats.Mallocs)
+		fmt.Println("Frees", memstats.Frees)
+	*/
 }
