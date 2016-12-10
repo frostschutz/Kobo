@@ -4,14 +4,17 @@ import (
 	"fmt"
 	"os"
 	// "runtime"
+	"reflect"
 	"syscall"
 	"unsafe"
 
 	"image"
 	_ "image/jpeg"
 	"image/png"
+)
 
-	"github.com/ev3go/ev3dev/fb" // provides RGB565
+const (
+	sizeof_uint16 = 2
 )
 
 func panic(msg string, err error) {
@@ -46,6 +49,11 @@ func main() {
 	fb0map, err := syscall.Mmap(int(fb0.Fd()), 0, int(screensize), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	panic("mmap", err)
 
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&fb0map))
+	header.Len /= sizeof_uint16
+	header.Cap /= sizeof_uint16
+	fb0pix := *(*[]Pixel565)(unsafe.Pointer(&header))
+
 	//	for i := uint32(0); i < screensize; i++ {
 	//		fb0map[i] = 0
 	//	}
@@ -54,9 +62,9 @@ func main() {
 
 	fmt.Println(screen)
 
-	var fb0image = &fb.RGB565{
-		Pix:    fb0map,
-		Stride: int(screen.Xres_virtual) * 2,
+	var fb0image = &Fb565{
+		Pix:    fb0pix,
+		Stride: int(screen.Xres_virtual),
 		Rect: image.Rectangle{
 			Min: image.Point{
 				X: 0,
