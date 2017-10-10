@@ -1,6 +1,7 @@
 #!/bin/sh
 
-PATH="/usr/local/AutoShelf":"$PATH"
+export LD_LIBRARY_PATH="/usr/local/AutoShelf:$LD_LIBRARY_PATH"
+PATH="/usr/local/AutoShelf:$PATH"
 BASE="/mnt/onboard/.addons/autoshelf"
 CONFIGFILE="$BASE/autoshelf.cfg"
 
