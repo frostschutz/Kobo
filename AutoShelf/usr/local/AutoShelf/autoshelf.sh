@@ -270,7 +270,7 @@ rm /tmp/autoshelf-on
 
 suspend_nickel autoshelf
 
-for i in $(seq 1 10)
+for i in $(seq 1 60)
 do
     if [ -e /mnt/onboard/.kobo/KoboReader.sqlite ]
     then
