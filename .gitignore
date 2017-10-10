@@ -3,7 +3,7 @@
 *.tgz
 *.zip
 a.out
-libstdbuf.so
+lib*.so*
 lodepng.c
 lodepng.h
 patch32lsb
