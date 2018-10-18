@@ -17,3 +17,4 @@ httpd_preload.so
 goink/goink
 inotifywait
 libinotifytools.*
+fbink
