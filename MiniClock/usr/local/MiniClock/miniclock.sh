@@ -59,40 +59,57 @@ load_config() {
     cfg_bg_color=$(config bg_color 'WHITE')
     cfg_update=$(config update '60')
     cfg_delay=$(config delay '1')
+    cfg_repeat=$(config repeat '3')
 }
 
 update() {
+    sleep 0.1
     fbink -X "$cfg_offset_x" -Y "$cfg_offset_y" -F "$cfg_font" -S "$cfg_size" \
           -C "$cfg_fg_color" -B "$cfg_bg_color" \
           "$(date +"$cfg_format")"
 }
 
-update_cycle() {
-    while sleep $((1 + $cfg_update - ($(date +%s) % cfg_update)))
-    do
-        [ -e /tmp/MiniClock ] || exit
-        update
-    done
+# expect X seconds for touch
+# return 0 if touched
+# return 1 if not touched
+timeout_touch() {
+    local touched="not"
+    read -t "$1" touched < /dev/input/event1
+    [ "$touched" != "not" ]
 }
 
 # --- Main: ---
 
 main() {
+    local i=0
+    local x=0
+
     udev_workarounds
     wait_for_nickel
-    uninstall_check
-
-    load_config
-
-    update_cycle &
 
     while :
     do
-        for i in $(seq 0 10)
+        # reload config regularly
+        uninstall_check
+        load_config
+
+        for x in $(seq 1 60)
         do
-            cat /dev/input/event1 | dd bs=1 count=1 of=/dev/null
-            sleep $cfg_delay
             update
+            timeout_touch $((1 + $cfg_update - ($(date +%s) % $cfg_update))) || continue
+
+            i=0
+            while [ $i -lt $cfg_repeat ]
+            do
+                i=$(($i+1))
+
+                update
+
+                if timeout_touch $cfg_delay
+                then
+                    i=0
+                fi
+            done
         done
     done
 }
