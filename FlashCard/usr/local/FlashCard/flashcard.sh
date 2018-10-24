@@ -40,7 +40,7 @@ resume_nickel() {
     rmdir /tmp/suspend-nickel/"$1"
     cat /tmp/flashcard-fb0dump > /dev/fb0
     rm /tmp/flashcard-fb0dump
-    fbink -s top=0,left=0,width=1080,height=1440,wfm=GC16 --flash
+    fbink -s top=0,left=0,width=$width,height=$height,wfm=GC16 --flash
     rmdir /tmp/suspend-nickel && (
         pkill -SIGCONT nickel
         pkill -SIGKILL sickel # 3.16.10 watchdog
@@ -99,10 +99,22 @@ random_number() {
     ))
 }
 
-# deduplicate (and sort) arguments
+# deduplicate: print one of each item
 dedup() {
     printf "%s\n" "$@" | sort -u
 }
+
+# dupes: only print duplicate items
+dupes() {
+    printf "%s\n" "$@" | sort | uniq -d
+}
+
+# uniqs: only print unique items
+uniqs() {
+    printf "%s\n" "$@" | sort | uniq -u
+}
+
+# uniqs: only print unique items
 
 # show some picture(s)
 show_picture() {
@@ -189,12 +201,7 @@ deck_pick() {
 deck_remove() {
     while read line
     do
-        line=" $line "
-        for word in $@
-        do
-            line=${line/ $word / }
-        done
-        echo $line
+        echo $(uniqs $(dedup $line) $@ $@)
     done
 }
 
@@ -216,14 +223,11 @@ deck_insert() {
     do
         if [ $level -eq 0 ]
         then
+            # insert in this line
             echo $(dedup $@ $line)
         else
-            line=" $line "
-            for word in $@
-            do
-                line=${line/ $word / }
-            done
-            echo $(dedup $line)
+            # remove from this line
+            echo $(uniqs $@ $@ $(dedup $line))
         fi
 
         level=$(($level-1))
@@ -280,9 +284,9 @@ load_config() {
 
     cfg_debug=$(config debug '0')
     cfg_debuglog=$(config debuglog '')
-    cfg_session=$(config session '5')
-    cfg_minutes=$(config minutes '1')
-    cfg_pageflips=$(config pageflips '3')
+    cfg_session=$(config session '25')
+    cfg_minutes=$(config minutes '10')
+    cfg_pageflips=$(config pageflips '30')
     cfg_step_easy=$(config step_easy '1')
     cfg_step_hard=$(config step_hard '2')
     cfg_savefile=$(config savefile 'deck.txt')
@@ -292,8 +296,8 @@ load_config() {
 
     # auto detect default touch zone
     set -- $(fbset | grep geometry)
-    local width=$2
-    local height=$3
+    width=$2
+    height=$3
 
     cfg_touch_hard=$(config touch_hard 0 0 $(($width/5*2)) $height)
     cfg_touch_easy=$(config touch_easy $(($width/5*3)) 0 $(($width/5*2)) $height)
@@ -339,18 +343,24 @@ auto_import() {
 
     set -- $(dedup $@)
 
+    echo auto_import cards: $@
+
     # load deck
     deck=$(load_deck)
 
     # are there cards in the deck that no longer exist?
-    missing=$(echo $deck | deck_remove $@)
+    missing=$(uniqs $deck $(dupes $(dedup $deck) $@))
     deck=$(echo "$deck" | deck_remove $missing)
 
-    # reverse deck_remove - remove cards already in the deck
-    set -- $(echo $@ | deck_remove $deck)
+    echo auto_import remove: $missing
+
+    # ignore cards already in the deck
+    set -- $(uniqs $deck $deck $@)
 
     # what, no cards?
     [ $# -eq 0 ] && return
+
+    echo auto_import insert: $@
 
     # determine where to insert cards
     sum=$(echo "$deck" | deck_sum)
@@ -364,7 +374,7 @@ auto_import() {
     done
 
     # do insert
-    echo -n "$deck" | deck_insert $h $@ | save_deck
+    echo "$deck" | deck_insert $h $@ | save_deck
 }
 
 # expect X seconds for touch
@@ -437,6 +447,16 @@ main() {
                 exit
             }
 
+            settle() {
+                # wait for touchscreen to settle
+                touched=""
+                while [ "$touched" != "not" ]
+                do
+                    touched="not"
+                    read -t 1 touched
+                done
+            }
+
             cd "$BASE" || bail base not found
 
             auto_import
@@ -489,16 +509,9 @@ main() {
                     # show background and card
                     show_picture $@ $s
 
-                    # wait for touchscreen to settle
-                    touched=""
-                    while [ "$touched" != "not" ]
-                    do
-                        touched="not"
-                        read -t 1 touched
-                    done
-
                     # obtain answer
                     pickel || bail pickel is not working
+                    settle
                     pickel wait-for-hit $cfg_touch_easy $cfg_touch_hard
                     answer=$?
                 done
@@ -520,6 +533,7 @@ main() {
             done
 
             echo "$deck" | save_deck
+            settle
             kill $touchgrabpid
         )
         resume_nickel flashcard
