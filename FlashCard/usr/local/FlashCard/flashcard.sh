@@ -118,6 +118,7 @@ uniqs() {
 
 # show some picture(s)
 show_picture() {
+    local f
     for f in "$@"
     do
         fbink -g file="$f"
@@ -511,8 +512,9 @@ main() {
                     fi
 
                     # show background and card and obtain answer
+                    show_picture $@ $s &
                     settle
-                    show_picture $@ $s
+                    wait
                     set --
                     pickel || bail pickel is not working
                     pickel wait-for-hit $cfg_touch_easy $cfg_touch_hard
