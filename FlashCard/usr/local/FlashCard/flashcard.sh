@@ -291,6 +291,8 @@ load_config() {
     cfg_step_hard=$(config step_hard '2')
     cfg_savefile=$(config savefile 'deck.txt')
     cfg_scheme=$(config scheme 'question.png question/{}.png answer.png answer/{}.png')
+    cfg_img_easy=$(config img_easy 'easy.png')
+    cfg_img_hard=$(config img_easy 'hard.png')
     cfg_autoimport=$(config autoimport '1')
     cfg_import_weight=$(config import_weight '50')
 
@@ -324,6 +326,8 @@ auto_import() {
     filesum=$(echo "$filesum" "$cfg_scheme" | md5sum)
     [ -s "$BASE"/"$cfg_savefile" -a "$filesum" = "$donesum" ] && return
     cd "$BASE" || return
+
+    donesum="$filesum"
 
     set -- # empty argument list
 
@@ -506,12 +510,11 @@ main() {
                         continue
                     fi
 
-                    # show background and card
-                    show_picture $@ $s
-
-                    # obtain answer
-                    pickel || bail pickel is not working
+                    # show background and card and obtain answer
                     settle
+                    show_picture $@ $s
+                    set --
+                    pickel || bail pickel is not working
                     pickel wait-for-hit $cfg_touch_easy $cfg_touch_hard
                     answer=$?
                 done
@@ -520,14 +523,15 @@ main() {
                 if [ $answer -eq 1 ]
                 then
                     level=$(($level-$cfg_step_easy))
+                    show_picture $cfg_img_easy
                 elif [ $answer -eq 2 ]
                 then
                     level=$(($level+$cfg_step_hard))
+                    show_picture $cfg_img_hard
                 fi
 
                 deck=$(
                     echo "$deck" |
-                    deck_remove $card |
                     deck_insert $level $card
                 )
             done
