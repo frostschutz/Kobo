@@ -293,7 +293,7 @@ load_config() {
     cfg_savefile=$(config savefile 'deck.txt')
     cfg_scheme=$(config scheme 'question.png question/{}.png answer.png answer/{}.png')
     cfg_img_easy=$(config img_easy 'easy.png')
-    cfg_img_hard=$(config img_easy 'hard.png')
+    cfg_img_hard=$(config img_hard 'hard.png')
     cfg_autoimport=$(config autoimport '1')
     cfg_import_weight=$(config import_weight '50')
 
@@ -316,6 +316,27 @@ save_deck() {
     deck_trim > "$BASE"/"$cfg_savefile"
 }
 
+# collect cards
+collect_cards() {
+    cd "$BASE"
+
+    for side in $cfg_scheme
+    do
+        prefix=${side%'{}'*}
+        postfix=${side#*'{}'}
+
+        # skip static files
+        [ "$prefix" = "$side" -o "$postfix" = "$side" ] && continue
+
+        for file in "$prefix"*"$postfix"
+        do
+            [ ! -e "$file" ] && continue
+            card=${file:${#prefix}:$((${#file}-${#postfix}-${#prefix}))}
+            echo $card
+        done
+    done
+}
+
 # auto-import new cards
 auto_import() {
     local filesum side prefix postfix card deck missing sum weight i h
@@ -323,29 +344,15 @@ auto_import() {
     [ "$cfg_autoimport" = "0" ] && return
 
     # only import if there are changes in the filesystem
-    local filesum=$(find "$base" | sort | md5sum)
+    local filesum=$(find "$BASE" | sort | md5sum)
     filesum=$(echo "$filesum" "$cfg_scheme" | md5sum)
     [ -s "$BASE"/"$cfg_savefile" -a "$filesum" = "$donesum" ] && return
     cd "$BASE" || return
 
     donesum="$filesum"
 
-    set -- # empty argument list
-
     # collect cards
-    for side in $cfg_scheme
-    do
-        prefix=${side%'{}'*}
-        postfix=${side#*'{}'}
-
-        for file in "$prefix"*"$postfix"
-        do
-            [ ! -e "$file" ] && continue
-            card=${file:${#prefix}:$((${#file}-${#postfix}-${#prefix}))}
-            set -- $@ $card
-        done
-    done
-
+    set -- $(collect_cards)
     set -- $(dedup $@)
 
     echo auto_import cards: $@
@@ -362,10 +369,10 @@ auto_import() {
     # ignore cards already in the deck
     set -- $(uniqs $deck $deck $@)
 
+    echo auto_import insert: $@
+
     # what, no cards?
     [ $# -eq 0 ] && return
-
-    echo auto_import insert: $@
 
     # determine where to insert cards
     sum=$(echo "$deck" | deck_sum)
@@ -492,45 +499,70 @@ main() {
                 set --
 
                 # show the card(s)
-                for s in $cfg_scheme
+                for side in $cfg_scheme
                 do
-                    # file exists? this is background
-                    if [ -f "$s" ]
-                    then
-                        set -- $@ "$s"
-                        continue
-                    fi
+                    case "$side" in
+                    *'{}'*)
+                        # this is a card
+                        prefix=${side%'{}'*}
+                        postfix=${side#*'{}'}
+                        side="$prefix$card$postfix"
+                        ##! above is workaround for side=${side/'{}'/"$card"}
+                        ##! which corrupts string or even segfaults for some cards.
+                        ##! busybox bug: https://bugs.busybox.net/show_bug.cgi?id=11436
 
-                    # this is actual card
-                    s=${s/'{}'/"$card"}
+                        if [ ! -f "$side" ]
+                        then
+                            # discard background for missing side
+                            set --
+                            continue
+                        fi
+                    ;;
+                    *)
+                        # this is a background
+                        if [ -f "$side" ]
+                        then
+                            set -- $@ "$side"
+                            continue
+                        fi
+                    ;;
+                    esac
 
-                    # file doesn't exist? discard background
-                    if [ ! -f "$s" ]
-                    then
-                        set --
-                        continue
-                    fi
-
-                    # show background and card and obtain answer
-                    show_picture $@ $s &
+                    # show background + card
+                    show_picture "$@" "$side" &
+                    set --
                     settle
                     wait
-                    set --
+
+                    # obtain answer
                     pickel || bail pickel is not working
                     pickel wait-for-hit $cfg_touch_easy $cfg_touch_hard
                     answer=$?
+                    # this answer may not be the final answer
+                    # if the card has more sides left to show
                 done
 
                 # process answer
-                if [ $answer -eq 1 ]
-                then
+                case "$answer" in
+                1)
+                    answer=0
                     level=$(($level-$cfg_step_easy))
                     show_picture $cfg_img_easy
-                elif [ $answer -eq 2 ]
-                then
+                ;;
+                2)
+                    answer=0
                     level=$(($level+$cfg_step_hard))
                     show_picture $cfg_img_hard
-                fi
+                ;;
+                *) # card without sides?
+                    echo discarding card without side : "$level" "$card" >> big_problem.txt
+                    deck=$(
+                        echo "$deck" |
+                        deck_remove $card
+                    )
+                    continue
+                ;;
+                esac
 
                 deck=$(
                     echo "$deck" |
