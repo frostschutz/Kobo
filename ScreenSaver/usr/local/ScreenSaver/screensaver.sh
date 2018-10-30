@@ -28,11 +28,14 @@ wait_for_nickel() {
     sleep 5
 }
 
+# config parser
 config() {
     local value
-    value=$(grep -m 1 "^$1=" "$CONFIGFILE")
-    value="${value:$((1+${#1}))}"
-    [ "$value" != "" ] && echo "$value" || echo "$2"
+    value=$(grep -E -m 1 "^$1\s*=" "$CONFIGFILE" | tr -d '\r')
+    value="${value:${#1}}"
+    value="${value#*=}"
+    shift
+    [ "$value" != "" ] && echo "$value" || echo "$@"
 }
 
 uninstall_check() {
@@ -51,21 +54,27 @@ uninstall_check() {
 # set framebuffer geometry variables
 #
 geometry() {
+    if [ ! -e /mnt/onboard/.addons/screensaver/fbset.txt ]
+    then
+        fbset > /mnt/onboard/.addons/screensaver/fbset.txt
+    fi
+
     set -- $(fbset | grep geometry)
     width=$2
-    widthbs=$(($2*2))
     height=$3
     line=$4
-    linebs=$(($4*2))
+    vyres=$5
+    depth=$6
+    pixelbs=$((($depth-1)/8+1))
+    widthbs=$(($width*$pixelbs))
+    linebs=$(($line*$pixelbs))
 }
 
 #
 # force screen refresh
 #
 refresh() {
-    # I'm too lazy, draw black/white for now.
-    pngshow /usr/local/ScreenSaver/1px-black.png
-    pngshow /usr/local/ScreenSaver/1px-white.png
+    fbink -s top=0,left=0,width=$width,height=$height,wfm=GC16
 }
 
 #
@@ -76,12 +85,12 @@ scanline_draw() {
     dd bs="$linebs" seek=$(($1+1)) count=1 if=/dev/urandom of=/dev/fb0
     refresh
 }
-P
+
 #
 # grab a line of pixels from the framebuffer
 #
 scanline() {
-    printf "%s" $(hexdump -s $(($1*$linebs)) -n $(($widthbs)) -e '1/2 "%04x"' /dev/fb0)
+    printf "%s" $(hexdump -v -s $(($1*$linebs)) -n $(($widthbs)) -e '1/4 "%x\n"' /dev/fb0 | sed -e 's@..@@' | uniq)
 }
 
 #
@@ -140,7 +149,7 @@ scanline_standby() {
     fi
 
     # framebuffer changed while scanning?
-    echo "$checksum" | md5sum -c || return 3
+    echo "$checksum" | md5sum -c -s || return 3
 
     echo "$moste_potente_offset:$moste_potente_line"
 }
@@ -202,7 +211,7 @@ do
         # should not reach if poweroff
         echo "
 #
-# Standby scanline autodetected [$i] $(date)
+# Standby scanline autodetected $(date)
 #   If this value does not work, remove it so it will be re-detected.
 #
 standby=$cfg_standby
@@ -274,13 +283,13 @@ poweroff=$offset:$cur
 
         if [ -e "$powerfile" -a "$power" = "$(scanline "$power_offset")" ]
         then
-            pngshow "$powerfile"
+            fbink -g file="$powerfile"
             break
         fi
 
         if [ -e "$standbyfile" -a "$standby" = "$(scanline "$standby_offset")" ]
         then
-            pngshow "$standbyfile"
+            fbink -g file="$standbyfile"
             break
         fi
     done
