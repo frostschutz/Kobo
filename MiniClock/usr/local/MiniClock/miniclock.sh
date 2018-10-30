@@ -48,7 +48,11 @@ uninstall_check() {
 
 load_config() {
     [ -z "${config_loaded:-}" ] || grep /mnt/onboard /proc/mounts || return 1 # not mounted
+    [ -z "${config_loaded:-}" ] || [ "$CONFIGFILE" -nt /tmp/MiniClock -o "$CONFIGFILE" -ot /tmp/MiniClock ] || return 1 # not changed
     config_loaded=1
+    touch -r "$CONFIGFILE" /tmp/MiniClock # remember timestamp
+
+    uninstall_check
 
     cfg_format=$(config format '%a %b %d %H:%M')
     cfg_offset_x=$(config offset_x '0')
@@ -89,27 +93,20 @@ main() {
 
     while :
     do
-        # reload config regularly
-        uninstall_check
         load_config
+        update
+        timeout_touch $((1 + $cfg_update - ($(date +%s) % $cfg_update))) || continue
 
-        for x in $(seq 1 60)
+        while [ $i -lt $cfg_repeat ]
         do
+            i=$(($i+1))
+
             update
-            timeout_touch $((1 + $cfg_update - ($(date +%s) % $cfg_update))) || continue
 
-            i=0
-            while [ $i -lt $cfg_repeat ]
-            do
-                i=$(($i+1))
-
-                update
-
-                if timeout_touch $cfg_delay
-                then
-                    i=0
-                fi
-            done
+            if timeout_touch $cfg_delay
+            then
+                i=0
+            fi
         done
     done
 }
