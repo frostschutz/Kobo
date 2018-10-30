@@ -10,6 +10,11 @@ http://www.mobileread.com/forums/showthread.php?t=253265
 Create collections for each folder directly on the Kobo.
 http://www.mobileread.com/forums/showthread.php?t=254554
 
+- FlashCard -
+
+Study flashcard / spaced repetition while you read.
+https://www.mobileread.com/forums/showthread.php?t=311894
+
 - HyphenDicts -
 
 Move all hyphenation dictionaries to USB storage /.addons/hyphendicts/ for editing.
@@ -19,6 +24,11 @@ http://www.mobileread.com/forums/showthread.php?t=266005
 
 Upgrade/Replace the Kobo's internal SD card on the fly.
 http://www.mobileread.com/forums/showthread.php?t=261578
+
+- MiniClock -
+
+Display current date/time on screen.
+https://www.mobileread.com/forums/showthread.php?p=3762123#post3762123
 
 - NickelIcons -
 
@@ -58,4 +68,4 @@ http://www.mobileread.com/forums/showthread.php?p=3367786#post3367786
 - pngshow -
 
 A program that draws PNG image data on the display, regardless of rotation.
-Should work for all Kobo eInk devices, used by several mods.
+DISCONTINUED: Use https://github.com/NiLuJe/FBInk instead.
