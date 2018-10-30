@@ -1,8 +1,8 @@
 #!/bin/busybox sh
 
-echo '::respawn:/sbin/my-inetd -f /etc/my-inetd.conf' >> /etc/inittab
+mkdir /tmp/telnetftp || exit
 
-rm /sbin/hwclock && ln -s ../bin/busybox /sbin/hwclock && sync
+echo '::respawn:/sbin/my-inetd -f /etc/my-inetd.conf' >> /etc/inittab
 
 rm /etc/udev/rules.d/telnetftp.rules
 rm /sbin/my-telnetftp
