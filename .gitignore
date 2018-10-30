@@ -18,3 +18,5 @@ goink/goink
 inotifywait
 libinotifytools.*
 fbink
+pickel
+touchgrab
