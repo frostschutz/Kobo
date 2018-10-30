@@ -455,6 +455,7 @@ main() {
             read -t 1 touchgrabpid
             bail() {
                 echo bailing $@
+                fbink "FlashCard ERROR: $@"
                 kill $touchgrabpid
                 exit
             }
@@ -535,7 +536,7 @@ main() {
                     wait
 
                     # obtain answer
-                    pickel || bail pickel is not working
+                    pickel wait-for-hit || bail pickel is not working
                     pickel wait-for-hit $cfg_touch_easy $cfg_touch_hard
                     answer=$?
                     # this answer may not be the final answer
