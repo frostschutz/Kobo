@@ -97,6 +97,7 @@ main() {
         update
         timeout_touch $((1 + $cfg_update - ($(date +%s) % $cfg_update))) || continue
 
+        i=0
         while [ $i -lt $cfg_repeat ]
         do
             i=$(($i+1))
