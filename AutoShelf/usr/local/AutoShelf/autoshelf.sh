@@ -27,9 +27,9 @@ like() {
 progress() {
     while [ -e /tmp/suspend-nickel ]
     do
-        pngshow /usr/local/AutoShelf/autoshelf.png
+        fbink -g file=/usr/local/AutoShelf/autoshelf.png
         sleep 2
-        [ -e /tmp/suspend-nickel ] && pngshow /usr/local/AutoShelf/autoshelf-off.png
+        [ -e /tmp/suspend-nickel ] && fbink -g file=/usr/local/AutoShelf/autoshelf-off.png
         sleep 2
     done
 }
@@ -234,7 +234,7 @@ then
     rm /tmp/autoshelf-on
     sleep 2
     grep /mnt/onboard /proc/mounts && exit
-    pngshow "/usr/local/AutoShelf/autoshelf-off.png"
+    fbink -g file="/usr/local/AutoShelf/autoshelf-off.png"
 
     while cat /dev/input/event1 | dd bs=1 count=1
     do
@@ -244,11 +244,11 @@ then
         then
             OFF=0
             touch /tmp/autoshelf-on
-            pngshow "/usr/local/AutoShelf/autoshelf.png"
+            fbink -g file="/usr/local/AutoShelf/autoshelf.png"
         else
             OFF=1
             rm /tmp/autoshelf-on
-            pngshow "/usr/local/AutoShelf/autoshelf-off.png"
+            fbink -g file="/usr/local/AutoShelf/autoshelf-off.png"
         fi
 
         sleep 1
