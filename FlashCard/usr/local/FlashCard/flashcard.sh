@@ -304,6 +304,12 @@ load_config() {
 
     cfg_touch_hard=$(config touch_hard 0 0 $(($width/5*2)) $height)
     cfg_touch_easy=$(config touch_easy $(($width/5*3)) 0 $(($width/5*2)) $height)
+
+    # pickel oddity: detects 0 0 anywhere so go with 1 1 for now
+    cfg_touch_hard=" $cfg_touch_hard "
+    cfg_touch_hard=${cfg_touch_hard// 0 / 1 }
+    cfg_touch_easy=" $cfg_touch_easy "
+    cfg_touch_easy=${cfg_touch_easy// 0 / 1 }
 }
 
 # (re)load deck
@@ -537,8 +543,16 @@ main() {
 
                     # obtain answer
                     pickel wait-for-hit || bail pickel is not working
-                    pickel wait-for-hit $cfg_touch_easy $cfg_touch_hard
-                    answer=$?
+
+                    # pickel oddity: detects wrong region - double detect
+                    oldanswer=9999
+                    answer=4242
+                    while [ $oldanswer -ne $answer ]
+                    do
+                        oldanswer=$answer
+                        pickel wait-for-hit $cfg_touch_easy $cfg_touch_hard
+                        answer=$?
+                    done
                     # this answer may not be the final answer
                     # if the card has more sides left to show
                 done
