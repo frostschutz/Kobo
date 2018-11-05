@@ -122,7 +122,7 @@ update() {
         [ -f "$cfg_truetype_bolditalic" ] && truetype="$truetype,bolditalic=$cfg_truetype_bolditalic"
 
         # fbink with truetype font
-        fbink --truetype "$truetype",size="$cfg_truetype_size",top="$cfg_truetype_x",bottom=0,left="$config_truetype_y",right=0,format \
+        fbink --truetype "$truetype",size="$cfg_truetype_size",top="$cfg_truetype_x",bottom=0,left="$cfg_truetype_y",right=0,format \
               -C "$cfg_truetype_fg" -B "$cfg_truetype_bg" \
               $nightmode \
               "$(date +"$cfg_format")"
