@@ -27,12 +27,16 @@ wait_for_nickel() {
 
 # config parser
 config() {
-    local value
-    value=$(grep -E -m 1 "^$1\s*=" "$CONFIGFILE" | tr -d '\r')
-    value="${value:${#1}}"
-    value="${value#*=}"
-    shift
-    [ "$value" != "" ] && echo "$value" || echo "$@"
+    local key value
+    key=$(grep -E "^$1\s*=" "$CONFIGFILE")
+    if [ $? -eq 0 ]
+    then
+        value=$(printf "%s" "$key" | tail -n 1 | sed -r -e 's@^[^=]*=\s*@@' -e 's@\s+(#.*|)$@@')
+        echo "$value"
+    else
+        shift
+        echo "$@"
+    fi
 }
 
 
@@ -64,13 +68,75 @@ load_config() {
     cfg_update=$(config update '60')
     cfg_delay=$(config delay '1')
     cfg_repeat=$(config repeat '3')
+
+    cfg_truetype=$(config truetype '')
+    cfg_truetype_size=$(config truetype_size '16')
+    cfg_truetype_x=$(config truetype_x "$cfg_offset_x")
+    cfg_truetype_y=$(config truetype_y "$cfg_offset_y")
+    cfg_truetype_fg=$(config truetype_fg "$cfg_fg_color")
+    cfg_truetype_bg=$(config truetype_bg "$cfg_bg_color")
+    cfg_truetype_format=$(config truetype_format "$cfg_format")
+    cfg_truetype_bold=$(config truetype_bold '')
+    cfg_truetype_italic=$(config truetype_italic '')
+    cfg_truetype_bolditalic=$(config truetype_bolditalic '')
+
+    cfg_nightmode_file=$(config nightmode_file '/mnt/onboard/.kobo/nightmode.ini')
+    cfg_nightmode_key=$(config nightmode_key 'invertActive')
+    cfg_nightmode_value=$(config nightmode_value 'yes')
+}
+
+# nightmode check
+nightmode_check() {
+    [ ! -e /tmp/MiniClock/nightmode ] && touch /tmp/MiniClock/nightmode
+
+    if [ "$cfg_nightmode_file" -nt /tmp/MiniClock/nightmode -o "$cfg_nightmode_file" -ot /tmp/MiniClock/nightmode ]
+    then
+        # nightmode state might have changed
+        nightmode=$(CONFIGFILE="$cfg_nightmode_file" config "$cfg_nightmode_key" "not $cfg_nightmode_value")
+
+        if [ "$nightmode" = "$cfg_nightmode_value" ]
+        then
+            nightmode="--invert"
+        else
+            nightmode=""
+        fi
+
+        # remember timestamp so we don't have to do this every time
+        touch -r "$cfg_nightmode_file" /tmp/MiniClock/nightmode
+    fi
 }
 
 update() {
     sleep 0.1
+
+    ( # subshell
+
+    cd "$BASE" # blocks USB lazy-umount and cd / doesn't work
+
+    if [ -f "$cfg_truetype" ]
+    then
+        # variants available?
+        truetype="regular=$cfg_truetype"
+        [ -f "$cfg_truetype_bold" ] && truetype="$truetype,bold=$cfg_truetype_bold"
+        [ -f "$cfg_truetype_italic" ] && truetype="$truetype,italic=$cfg_truetype_italic"
+        [ -f "$cfg_truetype_bolditalic" ] && truetype="$truetype,bolditalic=$cfg_truetype_bolditalic"
+
+        # fbink with truetype font
+        fbink --truetype "$truetype",size="$cfg_truetype_size",top="$cfg_truetype_x",bottom=0,left="$config_truetype_y",right=0,format \
+              -C "$cfg_truetype_fg" -B "$cfg_truetype_bg" \
+              $nightmode \
+              "$(date +"$cfg_format")"
+
+        [ $? -eq 0 ] && exit # return
+    fi
+
+    # fbink with builtin font
     fbink -X "$cfg_offset_x" -Y "$cfg_offset_y" -F "$cfg_font" -S "$cfg_size" \
           -C "$cfg_fg_color" -B "$cfg_bg_color" \
+          $nightmode \
           "$(date +"$cfg_format")"
+
+    ) # subshell end / unblock
 }
 
 # expect X seconds for touch
@@ -94,6 +160,8 @@ main() {
     while :
     do
         load_config
+        nightmode_check
+
         update
         timeout_touch $((1 + $cfg_update - ($(date +%s) % $cfg_update))) || continue
 
