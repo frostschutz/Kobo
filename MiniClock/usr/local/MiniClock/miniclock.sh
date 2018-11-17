@@ -78,6 +78,7 @@ load_config() {
     cfg_truetype_bold=$(config truetype_bold '')
     cfg_truetype_italic=$(config truetype_italic '')
     cfg_truetype_bolditalic=$(config truetype_bolditalic '')
+    cfg_truetype_padding=$(config truetype_padding '1')
 
     cfg_nightmode_file=$(config nightmode_file '/mnt/onboard/.kobo/nightmode.ini')
     cfg_nightmode_key=$(config nightmode_key 'invertActive')
@@ -106,6 +107,12 @@ load_config() {
     set -- $cfg_delay
     cfg_delta=$(($1+1))
     cfg_delta=${cfg_delta:-0}
+
+    # padding is spaces for now
+    if [ "$cfg_truetype_padding" != "0" ]
+    then
+        cfg_truetype_format=" $cfg_truetype_format "
+    fi
 }
 
 # nightmode check
