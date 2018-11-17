@@ -66,8 +66,7 @@ load_config() {
     cfg_fg_color=$(config fg_color 'BLACK')
     cfg_bg_color=$(config bg_color 'WHITE')
     cfg_update=$(config update '60')
-    cfg_delay=$(config delay '1')
-    cfg_repeat=$(config repeat '3')
+    cfg_delay=$(config delay '1 1 1')
 
     cfg_truetype=$(config truetype '')
     cfg_truetype_size=$(config truetype_size '16')
@@ -83,6 +82,22 @@ load_config() {
     cfg_nightmode_file=$(config nightmode_file '/mnt/onboard/.kobo/nightmode.ini')
     cfg_nightmode_key=$(config nightmode_key 'invertActive')
     cfg_nightmode_value=$(config nightmode_value 'yes')
+
+    # backward support for deprecated setting
+    # delay=1 repeat=3 -> delay=1 1 1
+    cfg_repeat=$(config repeat '')
+    if [ "$cfg_repeat" != "" ]
+    then
+        set -- $cfg_delay
+        if [ $# -eq 1 -a "$cfg_repeat" -ge 1 ]
+        then
+            cfg_delay=""
+            for i in $(seq 1 "$cfg_repeat")
+            do
+                cfg_delay="$cfg_delay $1"
+            done
+        fi
+    fi
 }
 
 # nightmode check
@@ -162,20 +177,12 @@ main() {
         load_config
         nightmode_check
 
-        update
-        timeout_touch $((1 + $cfg_update - ($(date +%s) % $cfg_update))) || continue
+        timeout_touch $((1 + $cfg_update - ($(date +%s) % $cfg_update)))
 
-        i=0
-        while [ $i -lt $cfg_repeat ]
+        for i in $cfg_delay
         do
-            i=$(($i+1))
-
+            sleep $i
             update
-
-            if timeout_touch $cfg_delay
-            then
-                i=0
-            fi
         done
     done
 }
