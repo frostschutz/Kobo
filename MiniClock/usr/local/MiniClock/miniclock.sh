@@ -83,13 +83,14 @@ load_config() {
     cfg_nightmode_key=$(config nightmode_key 'invertActive')
     cfg_nightmode_value=$(config nightmode_value 'yes')
 
-    # backward support for deprecated setting
+    # backward support for deprecated settings:
+
     # delay=1 repeat=3 -> delay=1 1 1
     cfg_repeat=$(config repeat '')
     if [ "$cfg_repeat" != "" ]
     then
         set -- $cfg_delay
-        if [ $# -eq 1 -a "$cfg_repeat" -ge 1 ]
+        if [ $# -eq 1 -a "$cfg_repeat" -gt 1 ]
         then
             cfg_delay=""
             for i in $(seq 1 "$cfg_repeat")
@@ -98,6 +99,13 @@ load_config() {
             done
         fi
     fi
+
+    # calculated settings:
+
+    # delta for sharp idle update
+    set -- $cfg_delay
+    cfg_delta=$(($1+1))
+    cfg_delta=${cfg_delta:-0}
 }
 
 # nightmode check
@@ -177,7 +185,7 @@ main() {
         load_config
         nightmode_check
 
-        timeout_touch $((1 + $cfg_update - ($(date +%s) % $cfg_update)))
+        timeout_touch $((1 + $cfg_update - ( ($(date +%s)+$cfg_delta) % $cfg_update)))
 
         for i in $cfg_delay
         do
