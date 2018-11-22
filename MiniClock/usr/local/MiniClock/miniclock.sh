@@ -84,6 +84,13 @@ load_config() {
     cfg_nightmode_key=$(config nightmode_key 'invertActive')
     cfg_nightmode_value=$(config nightmode_value 'yes')
 
+    cfg_battery_min=$(config battery_min '0')
+    cfg_battery_max=$(config battery_max '50')
+    cfg_battery_source=$(config battery_source '/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/capacity')
+
+    cfg_days=$(config days '')
+    cfg_months=$(config months '')
+
     # backward support for deprecated settings:
 
     # delay=1 repeat=3 -> delay=1 1 1
@@ -113,6 +120,79 @@ load_config() {
     then
         cfg_truetype_format=" $cfg_truetype_format "
     fi
+
+    # localization shenaniganizer
+    my_date() {
+        date "$@"
+    }
+
+    my_tt_date() {
+        date "$@"
+    }
+
+    case "$cfg_format" in
+        *{*)
+        my_date() {
+            shenaniganize_date "$@"
+        }
+        ;;
+    esac
+
+    case "$cfg_truetype_format" in
+        *{*)
+        my_tt_date() {
+            shenaniganize_date "$@"
+        }
+        ;;
+    esac
+}
+
+# string replace str a b
+str_replace() {
+    local pre
+    local post
+    pre=${1%%"$2"*}
+    post=${1#*"$2"}
+    echo "$pre$3$post"
+}
+
+# shenaniganize date
+shenaniganize_date() {
+    local datestr=$(date "$@")
+    local pre post number
+
+    # shenaniganize all the stuff
+    for i in $(seq 100) # terminate on invalid strings
+    do
+        case "$datestr" in
+            *{battery}*)
+                battery=$(cat "$cfg_battery_source")
+                if [ $? -eq 0 -a "$battery" -ge "$cfg_battery_min" -a "$battery" -le "$cfg_battery_max" ]
+                then
+                    battery="$battery"%
+                else
+                    battery=""
+                fi
+                datestr=$(str_replace "$datestr" "{battery}" "$battery")
+            ;;
+            *{day}*)
+                set -- "" $cfg_days
+                day=$(date +%u)
+                shift $day
+                datestr=$(str_replace "$datestr" "{day}" "$1")
+            ;;
+            *{month}*)
+                set -- "" $cfg_months
+                month=$(date +%m)
+                shift $month
+                datestr=$(str_replace "$datestr" "{month}" "$1")
+            ;;
+            *)
+                echo "$datestr"
+                return
+            ;;
+        esac
+    done
 }
 
 # nightmode check
@@ -155,7 +235,7 @@ update() {
         fbink --truetype "$truetype",size="$cfg_truetype_size",top="$cfg_truetype_y",bottom=0,left="$cfg_truetype_x",right=0,format \
               -C "$cfg_truetype_fg" -B "$cfg_truetype_bg" \
               $nightmode \
-              "$(date +"$cfg_truetype_format")"
+              "$(my_tt_date +"$cfg_truetype_format")"
 
         [ $? -eq 0 ] && exit # return
     fi
@@ -164,7 +244,7 @@ update() {
     fbink -X "$cfg_offset_x" -Y "$cfg_offset_y" -F "$cfg_font" -S "$cfg_size" \
           -C "$cfg_fg_color" -B "$cfg_bg_color" \
           $nightmode \
-          "$(date +"$cfg_format")"
+          "$(my_date +"$cfg_format")"
 
     ) # subshell end / unblock
 }
