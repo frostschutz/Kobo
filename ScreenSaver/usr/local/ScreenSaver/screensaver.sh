@@ -284,7 +284,7 @@ poweroff=$offset:$cur
         if [ -e "$powerfile" -a "$power" = "$(scanline "$power_offset")" ]
         then
             fbink -g file="$powerfile"
-            break
+            # break # poweroff refresh wars in 4.12 firmware
         fi
 
         if [ -e "$standbyfile" -a "$standby" = "$(scanline "$standby_offset")" ]
