@@ -12,6 +12,24 @@
 # * https://github.com/NiLuJe/FBInk ( display all the things )
 # * https://github.com/FortAwesome/Font-Awesome ( free icons )
 
+# --- Helpers: ---
+
+# convert bytes to human readable unit (rounded up)
+h_unit() {
+    local value=$1
+    local unit="b"
+    set -- K M G T
+
+    while [ $value -ge 900 -a $# -ge 1 ]
+    do
+        value=$(( ($value+400) / 1000 ))
+        unit=$1
+        shift
+    done
+
+    echo "$value$unit"
+}
+
 # --- FBInk Helpers: ---
 
 # grab fbink variables: {view,screen}{Width,Height}, DPI, BPP, device{Name,Id,Codename,Platform}, ...
@@ -96,6 +114,16 @@ fbink_render_text() {
     fbink_error "render error $?" "$font ($point) @ $rect"
 }
 
+# render centered text
+fbink_render_cntr() {
+    fbink_render_text "$@" --halfway --centered
+}
+
+# render overlay text
+fbink_render_over() {
+    fbink_render_cntr "$@" --overlay
+}
+
 # --- UI: ---
 
 # display battery status
@@ -136,14 +164,66 @@ d_title() {
     fbink_render_text "150 50 300 50" vera.ttf "Magic Memory" --centered
 }
 
+# display ram
+d_ram() {
+    # ram:
+    set -- $(grep MemTotal /proc/meminfo) 0 0
+    local ramsize=$(($2*1024))
+
+    fbink_render_cntr "100 150 50 50" fa.ttf $'\xef\x8b\x9b' # U+F538 fa-microchip
+    fbink_render_over "110 160 30 30" vera.ttf "RAM"
+    fbink_render_cntr "150 150 50 50" vera.ttf $(h_unit "$ramsize")
+}
+
+# display internal sd card
+d_sd_int() {
+    set -- $(cat /sys/block/mmcblk0/size) 0
+    local intsize=$(($1*512))
+
+    fbink_render_cntr "250 150 50 50" fa.ttf $'\xef\x9f\x82' # U+F7C2 fa-sd-card
+    fbink_render_over "260 170 30 30" vera.ttf "INT"
+
+    if [ $intsize -gt 0 ]
+    then
+        fbink_render_cntr "300 150 50 50" vera.ttf $(h_unit "$intsize")
+    else
+        fbink_render_over "250 150 50 50" fa.ttf $'\xef\x9c\x95' # U+F715 fa-slash
+        fbink_render_cntr "300 150 50 50" fa.ttf $'\xef\x81\xa5' # U+F065 fa-expand
+    fi
+}
+
+# display external sd card
+d_sd_ext() {
+    # external sdcard:
+    set -- $(cat /sys/block/mmcblk1/size) 0
+    local extsize=$(($1*512))
+
+    fbink_render_cntr "400 150 50 50" fa.ttf $'\xef\x9f\x82' # U+F7C2 fa-sd-card
+    fbink_render_over "410 170 30 30" vera.ttf "EXT"
+
+    if [ $extsize -gt 0 ]
+    then
+        fbink_render_cntr "450 150 50 50" vera.ttf $(h_unit "$extsize")
+    else
+        fbink_render_over "400 150 50 50" fa.ttf $'\xef\x9c\x95' # U+F715 fa-slash
+        fbink_render_cntr "450 150 50 50" fa.ttf $'\xef\x81\xa5' # U+F065 fa-expand
+    fi
+}
+
 # re-draw entire UI
 do_draw_ui() {
     fbink_dirty=0
     fbink --quiet --clear --norefresh
 
+    # header
     d_title
     d_logo
     d_battery
+
+    # specs
+    d_ram
+    d_sd_int
+    d_sd_ext
 }
 
 draw_ui() {
@@ -157,16 +237,12 @@ draw_ui() {
         then
             do_draw_ui
         else
-            break
+            fbink --quiet --refresh ''
+            return
         fi
     done
 
-    fbink --quiet --refresh ''
-
-    if [ "$fbink_dirty" -eq 1 ]
-    then
-        fbink_error "fbink_dirty still set after $tries draw iterations"
-    fi
+    fbink_error "fbink_dirty still set after $tries draw iterations"
 }
 
 # --- Main: ---
