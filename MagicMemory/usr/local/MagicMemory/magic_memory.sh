@@ -51,7 +51,8 @@ fbink_render_text() {
     local rect="$1" # x y width height
     local font="$2"
     local text="$3"
-    local key=$(printf "%s\0" "$1" "$2" "$3" | md5sum | head -c 8)
+    shift 3
+    local extra_args="$@"
 
     if [ -z "text" ]
     then
@@ -69,6 +70,7 @@ fbink_render_text() {
     local bottom=$(($viewHeight - $top - $height))
 
     # grab pointsize from cache
+    local key=$(printf "%s\0" "$font" "$text" "$width" "$height" | md5sum | head -c 8)
     local point=${point_cache#*$key=}
     point=${point%% *}
 
@@ -88,9 +90,7 @@ fbink_render_text() {
     fi
 
     # actually draw it out
-    fbink --quiet --clear
-    # --norefresh \
-    fbink --quiet \
+    fbink --quiet --norefresh $extra_args \
           --truetype "regular=$font,size=$point,left=$left,top=$top,right=$right,bottom=$bottom" \
           "$text" ||
     fbink_error "render error $?" "$font ($point) @ $rect"
@@ -99,7 +99,7 @@ fbink_render_text() {
 # --- UI: ---
 
 # display battery status
-battery() {
+d_battery() {
     local capacity=$(cat "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/capacity")
     local status=$(cat "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/status")
     local icon=""
@@ -126,8 +126,52 @@ battery() {
     fbink_render_text "500 50 50 50" fa.ttf "$info$icon"
 }
 
+# display logo
+d_logo() {
+    fbink_render_text "50 50 50 50" fa.ttf $'\xef\x9b\xa8' # U+F6E8 fa-hat-wizard
+}
+
+# display title
+d_title() {
+    fbink_render_text "150 50 300 50" vera.ttf "Magic Memory" --centered
+}
+
+# re-draw entire UI
+do_draw_ui() {
+    fbink_dirty=0
+    fbink --quiet --clear --norefresh
+
+    d_title
+    d_logo
+    d_battery
+}
+
+draw_ui() {
+    local tries=3
+
+    fbink_dirty=1
+
+    for tries in $(seq $tries)
+    do
+        if [ "$fbink_dirty" -eq 1 ]
+        then
+            do_draw_ui
+        else
+            break
+        fi
+    done
+
+    fbink --quiet --refresh ''
+
+    if [ "$fbink_dirty" -eq 1 ]
+    then
+        fbink_error "fbink_dirty still set after $tries draw iterations"
+    fi
+}
+
 # --- Main: ---
 
 fbink_eval
+draw_ui
 
 # --- End of file. ---
