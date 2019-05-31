@@ -128,8 +128,8 @@ fbink_render_over() {
 
 # display battery status
 d_battery() {
-    local capacity=$(cat "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/capacity")
-    local status=$(cat "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/status")
+    local capacity=$(cat /sys/devices/platform/pmic_battery.1/power_supply/*/capacity)
+    local status=$(cat /sys/devices/platform/pmic_battery.1/power_supply/*/status)
     local icon=""
     local info=""
 
@@ -147,7 +147,8 @@ d_battery() {
     case "$status" in
       Discharging)  ;;
       Charging)     info=$'\xef\x83\xa7'  ;; # U+F0E7 fa-bolt
-      Not?charging) info=$'\xef\x97\xa7'  ;; # U+F5E7 fa-charging-station
+      Not?charging) info=$'\xef\x87\xa6'  ;; # U+F1E6 fa-plug
+      Full)         info=$'\xef\x97\xa7'  ;; # U+F5E7 fa-charging-station
       *)            info=$'\xef\x8b\xbe'  ;; # U+F2FE fa-poo
     esac
 
