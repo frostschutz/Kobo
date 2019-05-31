@@ -30,6 +30,15 @@ h_unit() {
     echo "$value$unit"
 }
 
+# expect X seconds for touch
+# return 0 if touched
+# return 1 if not touched
+timeout_touch() {
+    local touched="not"
+    read -t "$1" touched < /dev/input/event1
+    [ "$touched" != "not" ]
+}
+
 # --- FBInk Helpers: ---
 
 # grab fbink variables: {view,screen}{Width,Height}, DPI, BPP, device{Name,Id,Codename,Platform}, ...
@@ -238,7 +247,8 @@ draw_ui() {
         then
             do_draw_ui
         else
-            fbink --quiet --refresh ''
+            fbink --quiet --refresh '' \
+                  $(rm /tmp/fbink_flash 2> /dev/null && echo --flash)
             return
         fi
     done
@@ -248,7 +258,23 @@ draw_ui() {
 
 # --- Main: ---
 
+# trigger screen flash every 60s or sooner when touched
+# (this is a background task)
+fbink_flash_refresh_timer() {
+    while sleep 1
+    do
+        timeout_touch 10
+        touch /tmp/fbink_flash
+    done
+}
+
+fbink_flash_refresh_timer &
 fbink_eval
-draw_ui
+
+for i in $(seq 60)
+do
+    sleep 1
+    draw_ui
+done
 
 # --- End of file. ---
