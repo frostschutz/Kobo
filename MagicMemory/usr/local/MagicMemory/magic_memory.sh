@@ -43,12 +43,22 @@ timeout_touch() {
 
 # grab fbink variables: {view,screen}{Width,Height}, DPI, BPP, device{Name,Id,Codename,Platform}, ...
 fbink_eval() {
-    eval $(fbink --quiet --eval)
+    eval $(fbink --quiet --eval; echo "exit=$?")
+    vviewWidth=$viewWidth
+    vviewHeight=$viewHeight
+    # # virtual resolution for testing only
+    # vviewWidth=768
+    # vviewHeight=1024
 }
 
 # draw something and grab its coordinates lastRect_{Top,Left,Width,Height}
-fbink_rect() {
-    eval $(fbink --quiet --coordinates --norefresh "$@")
+fbink_coordinates() {
+    eval $(fbink --quiet --coordinates --norefresh "$@" 2> /dev/null; echo "exit=$?;")
+}
+
+# draw truetype text and grab rendered_lines, truncated, ...
+fbink_truetype() {
+    eval $(fbink --quiet --linecount --norefresh --truetype "$@" 2> /dev/null; echo "exit=$?;")
 }
 
 # refresh whole screen
@@ -89,12 +99,14 @@ fbink_render_text() {
 
     # translate coordinates
     set -- $rect
-    local left=$(($1 * $viewWidth / 600))
-    local top=$(($2 * $viewHeight / 800))
-    local width=$(($3 * $viewWidth / 600))
-    local height=$(($4 * $viewHeight / 800))
+    local left=$(($1 * $vviewWidth / 600))
+    local top=$(($2 * $vviewHeight / 800))
+    local width=$(($3 * $vviewWidth / 600))
+    local height=$(($4 * $vviewHeight / 800))
     local right=$(($viewWidth - $left - $width))
     local bottom=$(($viewHeight - $top - $height))
+
+    # echo "$rect = [ $left $top $width $height $right $bottom ]"
 
     # grab pointsize from cache
     local key=$(printf "%s\0" "$font" "$text" "$width" "$height" | md5sum | head -c 8)
@@ -105,21 +117,49 @@ fbink_render_text() {
     if [ -z $point ]
     then
         fbink_dirty=1
-        for point in $(seq 2 100)
+
+        local min=10
+        local max=20
+        local steps=0
+        local upper=0
+        local lower=0
+
+        while [ $steps -lt 20 -a $min -lt $max ]
         do
-            lastRect_Width=9$width
-            lastRect_Height=9$height
-            fbink_rect --truetype "regular=$font,size=$point" "$text"
-            [ $lastRect_Width -gt $width -o $lastRect_Height -gt $height ] && break
+            steps=$(($steps+1))
+            point=$(( ($min+$max+1) / 2 ))
+            truncated=1
+            exit=1
+
+            fbink_truetype \
+              "regular=$font,size=$point,left=$left,top=$top,right=$right,bottom=$bottom" \
+              $extra_args \
+              -- "$text"
+
+            if [ "$exit" != "0" -o "$truncated" != "0" ]
+            then
+                # too large
+                max=$(($point-1))
+                upper=1
+                [ "$lower" == 0 ] && min=$(( ($min+1) / 2 ))
+            else
+                # too small?
+                min=$point
+                lower=1
+                [ "$upper" == 0 ] && max=$(($max*2))
+            fi
         done
-        point=$(($point-1))
+
+        point=$min
         point_cache="$point_cache $key=$point "
+
+        echo $point "$text"
     fi
 
     # actually draw it out
     fbink --quiet --norefresh $extra_args \
           --truetype "regular=$font,size=$point,left=$left,top=$top,right=$right,bottom=$bottom" \
-          "$text" ||
+          -- "$text" ||
     fbink_error "render error $?" "$font ($point) @ $rect"
 }
 
@@ -171,7 +211,7 @@ d_logo() {
 
 # display title
 d_title() {
-    fbink_render_text "150 50 300 50" vera.ttf "Magic Memory" --centered
+    fbink_render_cntr "150 50 300 50" vera.ttf "Magic Memory"
 }
 
 # display ram
