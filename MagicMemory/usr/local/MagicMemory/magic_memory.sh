@@ -228,18 +228,71 @@ d_ram() {
 # display internal sd card
 d_sd_int() {
     set -- $(cat /sys/block/mmcblk0/size) 0
-    local intsize=$(($1*512))
+    local size=$(($1*512))
 
     fbink_render_cntr "250 150 50 50" fa.ttf $'\xef\x9f\x82' # U+F7C2 fa-sd-card
     fbink_render_over "260 170 30 30" vera.ttf "INT"
 
-    if [ $intsize -gt 0 ]
+    if [ $size -le 0 ]
     then
-        fbink_render_cntr "300 150 50 50" vera.ttf $(h_unit "$intsize")
-    else
+        # there is no internal sd card present
         fbink_render_over "250 150 50 50" fa.ttf $'\xef\x9c\x95' # U+F715 fa-slash
         fbink_render_cntr "300 150 50 50" fa.ttf $'\xef\x81\xa5' # U+F065 fa-expand
+    else
+        fbink_render_cntr "300 150 50 50" vera.ttf $(h_unit "$size")
+        d_showpartitions
     fi
+}
+
+d_showpartitions() {
+    # show partitions
+    local pstart=0
+    local psize=0
+    local pmin=0
+    local pmax=0
+    local pother=0
+    local pfree=0
+
+    for partition in /sys/block/mmcblk0/mmcblk0p*
+    do
+        pstart=$(( $(cat "$partition"/start) * 512 ))
+        psize=$(( $(cat "$partition"/size) * 512 ))
+
+        [ $pmin -eq 0 -o $pmin -gt $pstart ] && pmin=$pstart
+        [ $pmax -lt $(($pstart+$psize)) ] && pmax=$(($pstart+$psize))
+
+        case "$partition" in
+          *p1) # rootfs
+            fbink_render_cntr "250 250 50 50" fa.ttf $'\xef\x84\xa1' # U+F121 fa-code
+            fbink_render_cntr "300 250 50 50" vera.ttf $(h_unit "$psize")
+            ;;
+          *p2) # recoveryfs
+            fbink_render_cntr "250 300 50 50" fa.ttf $'\xef\x93\x8d' # U+F4CD fa-parachute-box
+            fbink_render_cntr "300 300 50 50" vera.ttf $(h_unit "$psize")
+            ;;
+          *p3) # KOBOeReader
+            fbink_render_cntr "250 350 50 50" fa.ttf $'\xef\x80\xad' # U+F02D fa-book
+            fbink_render_cntr "300 350 50 50" vera.ttf $(h_unit "$psize")
+            ;;
+          *) # other?!
+            fbink_render_cntr "250 450 50 50" fa.ttf $'\xef\x81\x99' # U+F059 fa-question-circle
+            fbink_render_over "300 450 50 50" vera.ttf $(h_unit "$psize")
+            ;;
+        esac
+    done
+
+    # kernel
+    if [ $pmin -gt 0 ]
+    then
+        fbink_render_cntr "250 200 50 50" fa.ttf $'\xef\x95\x84' # U+F544 fa-robot
+        fbink_render_cntr "300 200 50 50" vera.ttf $(h_unit $pmin)
+    fi
+
+    # free space
+    pfree=$(( $(cat /sys/block/mmcblk0/size)*512 - $pmax ))
+    fbink_render_cntr "250 400 50 50" fa.ttf $'\xef\x87\x8e' # U+F1CE fa-circle-notch
+    fbink_render_over "260 410 30 30" vera.ttf "FREE"
+    fbink_render_cntr "300 400 50 50" vera.ttf $(h_unit $pfree)
 }
 
 # display external sd card
@@ -287,7 +340,7 @@ draw_ui() {
         then
             do_draw_ui
         else
-            fbink --quiet --refresh '' \
+            fbink --quiet --flash --refresh '' \
                   $(rm /tmp/fbink_flash 2> /dev/null && echo --flash)
             return
         fi
@@ -308,13 +361,7 @@ fbink_flash_refresh_timer() {
     done
 }
 
-fbink_flash_refresh_timer &
 fbink_eval
-
-for i in $(seq 60)
-do
-    sleep 1
-    draw_ui
-done
+draw_ui
 
 # --- End of file. ---
