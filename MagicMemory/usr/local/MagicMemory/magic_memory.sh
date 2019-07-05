@@ -218,13 +218,21 @@ d_title() {
 
 # display ram
 d_ram() {
-    # ram:
-    set -- $(grep MemTotal /proc/meminfo) 0 0
-    local ramsize=$(($2*1024))
+    set -- $(grep -E '^(MemTotal|MemFree|Buffers|Cached|Shmem):' /proc/meminfo) \
+           MemTotal: 0 kB MemFree: 0 kB Buffers: 0 kB Cached: 0 kB Shmem: 0 kB
 
-    fbink_render_cntr "50 150 50 50" fa.ttf $'\xef\x8b\x9b' # U+F538 fa-microchip
-    fbink_render_over "60 140 30 70" vera.ttf "RAM"
-    fbink_render_cntr "100 150 50 50" vera.ttf $(h_unit "$ramsize")
+    local memtotal=$(($2*1024))
+    local memfree=$(($5*1024+$8*1024+$11*1024-$14*1024)) # free+buffers+cached-shmem
+    local memused=$(($memtotal-$memfree))
+
+    fbink_render_cntr "75 150 50 50" fa.ttf $'\xef\x8b\x9b' # U+F538 fa-microchip
+    fbink_render_over "85 140 30 70" vera.ttf "RAM"
+    fbink_render_cntr "50 250 100 25" vera.ttf "Total:"
+    fbink_render_cntr "50 325 100 25" vera.ttf "Used:"
+    fbink_render_cntr "50 400 100 25" vera.ttf "Free:"
+    fbink_render_cntr "50 275 100 50" vera.ttf $(h_unit "$memtotal")
+    fbink_render_cntr "50 350 100 50" vera.ttf $(h_unit "$memused")
+    fbink_render_cntr "50 425 100 50" vera.ttf $(h_unit "$memfree")
 }
 
 # display internal sd card
