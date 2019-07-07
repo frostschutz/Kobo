@@ -391,10 +391,9 @@ draw_ui() {
 
     for tries in $(seq $tries)
     do
-        if [ "$fbink_dirty" -eq 1 ]
+        do_draw_ui
+        if [ "$fbink_dirty" -eq 0 ]
         then
-            do_draw_ui
-        else
             fbink --quiet --flash --refresh '' \
                   $(rm /tmp/fbink_flash 2> /dev/null && echo --flash)
             return
