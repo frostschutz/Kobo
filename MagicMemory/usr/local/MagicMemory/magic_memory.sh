@@ -230,8 +230,10 @@ d_ram() {
 
     fbink_render_cntr "0 100 50 50" fa.ttf $'\xef\x8b\x9b' # U+F538 fa-microchip
     fbink_render_over "10 90 30 70" vera.ttf "RAM"
-    fbink_render_cntr "0 200 50 50" fa.ttf $'\xef\xa1\x8c' # U+F84C fa-border-all
-    fbink_render_cntr "50 200 100 50" vera.ttf $(h_unit "$memtotal")
+    fbink_render_cntr "50 100 100 50" vera.ttf $(h_unit "$memtotal")
+    fbink_render_cntr "0 200 50 50" fa.ttf $'\xef\x97\x8e' # U+F5CE fa-wine-glass-alt
+    fbink_render_cntr "50 200 100 50" vera.ttf $(($memused*100/$memtotal))%
+
     fbink_render_cntr "0 250 50 50" fa.ttf $'\xef\x83\x88' # U+F0C8 fa-square
     fbink_render_cntr "50 250 100 50" vera.ttf $(h_unit "$memused")
     fbink_render_cntr "0 300 50 50" fa.ttf $'\xef\xa1\x90' # U+F850 fa-border-none
