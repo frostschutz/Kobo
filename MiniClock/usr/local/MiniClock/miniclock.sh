@@ -58,6 +58,9 @@ load_config() {
 
     uninstall_check
 
+    cfg_touchscreen=$(config touchscreen '1')
+    cfg_button=$(config button '0')
+
     cfg_format=$(config format '%a %b %d %H:%M')
     cfg_offset_x=$(config offset_x '0')
     cfg_offset_y=$(config offset_y '0')
@@ -145,6 +148,19 @@ load_config() {
         }
         ;;
     esac
+
+    # patch handling
+    if [ ! -e /tmp/MiniClock/patch -a "$cfg_button" == "1" ]
+    then
+        touch /tmp/MiniClock/patch
+
+        libnickel=$(realpath /usr/local/Kobo/libnickel.so)
+        if strings "$libnickel" | grep -F '/dev/input/event0:keymap=keys/device.qmap:grab=1'
+        then
+            sed -i -e 's@/dev/input/event0:keymap=keys/device.qmap:grab=1@/dev/input/event0:keymap=keys/device.qmap:grab=0@' "$libnickel"
+            touch /tmp/MiniClock/reboot
+        fi
+    fi
 }
 
 # string replace str a b
@@ -217,6 +233,8 @@ nightmode_check() {
 }
 
 update() {
+    mkdir /tmp/MiniClock/update || return
+
     sleep 0.1
 
     ( # subshell
@@ -237,7 +255,7 @@ update() {
               $nightmode \
               "$(my_tt_date +"$cfg_truetype_format")"
 
-        [ $? -eq 0 ] && exit # return
+        [ $? -eq 0 ] && rmdir /tmp/MiniClock/update && exit # return
     fi
 
     # fbink with builtin font
@@ -247,6 +265,10 @@ update() {
           "$(my_date +"$cfg_format")"
 
     ) # subshell end / unblock
+
+    [ -e /tmp/MiniClock/reboot ] && fbink "MiniClock: Please Reboot for Button Patch"
+
+    rmdir /tmp/MiniClock/update
 }
 
 # expect X seconds for touch
@@ -254,7 +276,7 @@ update() {
 # return 1 if not touched
 timeout_touch() {
     local touched="not"
-    read -t "$1" touched < /dev/input/event1
+    read -t "$1" touched < "$2"
     [ "$touched" != "not" ]
 }
 
@@ -266,19 +288,57 @@ main() {
 
     udev_workarounds
     wait_for_nickel
+    mkfifo /tmp/MiniClock/loop
 
-    while :
+    while [ -p /tmp/MiniClock/loop ]
     do
         load_config
         nightmode_check
 
-        timeout_touch $((1 + $cfg_update - ( ($(date +%s)+$cfg_delta) % $cfg_update)))
+        if [ "$cfg_touchscreen" = 1 ]
+        then
+        (
+           mkdir /tmp/MiniClock/touchscreen || exit
+           timeout_touch $((1 + $cfg_update - ( ($(date +%s)+$cfg_delta) % $cfg_update))) /dev/input/event1
 
-        for i in $cfg_delay
-        do
-            sleep $i
-            update
-        done
+           for i in $cfg_delay
+           do
+               sleep $i
+               update
+           done
+           rmdir /tmp/MiniClock/touchscreen
+           echo next > /tmp/MiniClock/loop
+       ) &
+       fi
+
+       if [ "$cfg_button" = 1 ]
+       then
+       (
+           mkdir /tmp/MiniClock/button || exit
+           timeout_touch $((1 + $cfg_update - ( ($(date +%s)+$cfg_delta) % $cfg_update))) /dev/input/event0
+
+           for i in $cfg_delay
+           do
+               sleep $i
+               update
+           done
+           rmdir /tmp/MiniClock/button
+           echo next > /tmp/MiniClock/loop
+       ) &
+       fi
+
+       if [ "$cfg_touchscreen" = 0 -a "$cfg_button" = 0 ]
+       then
+       (
+           mkdir /tmp/MiniClock/frequency || exit
+           sleep $(( ($(date +%s)+$cfg_delta) % $cfg_update ))
+           update
+           rmdir /tmp/MiniClock/frequency
+           echo next > /tmp/MiniClock/loop
+       ) &
+       fi
+
+       read -t $cfg_update next < /tmp/MiniClock/loop
     done
 }
 
