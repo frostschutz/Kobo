@@ -185,7 +185,7 @@ shenaniganize_date() {
                 battery=$(cat "$cfg_battery_source")
                 if [ $? -eq 0 -a "$battery" -ge "$cfg_battery_min" -a "$battery" -le "$cfg_battery_max" ]
                 then
-                    battery="$battery"%
+                    battery="$battery""%%"
                 else
                     battery=""
                 fi
