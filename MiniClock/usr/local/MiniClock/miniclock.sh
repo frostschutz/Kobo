@@ -203,6 +203,10 @@ shenaniganize_date() {
                 shift $month
                 datestr=$(str_replace "$datestr" "{month}" "$1")
             ;;
+            *{debug}*)
+                read uptime runtime < /proc/uptime
+                datestr=$(str_replace "$datestr" "{debug}" "|$causality:$uptime|")
+            ;;
             *)
                 echo "$datestr"
                 return
@@ -294,12 +298,13 @@ main() {
     do
         load_config
         nightmode_check
+        causality="freq"
 
         if [ "$cfg_touchscreen" = 1 ]
         then
         (
            mkdir /tmp/MiniClock/touchscreen || exit
-           timeout_touch $((1 + $cfg_update - ( ($(date +%s)+$cfg_delta) % $cfg_update))) /dev/input/event1
+           timeout_touch $((1 + $cfg_update - ( ($(date +%s)+$cfg_delta) % $cfg_update))) /dev/input/event1 && causality=touch
 
            for i in $cfg_delay
            do
@@ -315,7 +320,7 @@ main() {
        then
        (
            mkdir /tmp/MiniClock/button || exit
-           timeout_touch $((1 + $cfg_update - ( ($(date +%s)+$cfg_delta) % $cfg_update))) /dev/input/event0
+           timeout_touch $((1 + $cfg_update - ( ($(date +%s)+$cfg_delta) % $cfg_update))) /dev/input/event0 && causality=butt
 
            for i in $cfg_delay
            do
