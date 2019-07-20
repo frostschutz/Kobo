@@ -30,5 +30,5 @@ echo EV='"'$(parse_prefix EV)'"'
 for ev in $(parse_prefix EV)
 do
     set -- $(parse_prefix $ev)
-    [ $# -gt 0 ] && echo $ev='"'$@'"'
+    [ $# -gt 0 ] && echo EV_$ev='"'$@'"'
 done
