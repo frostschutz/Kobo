@@ -153,10 +153,29 @@ load_config() {
         ;;
     esac
 
+    # debug handling
     case "$cfg_format $cfg_truetype_format" in
         *{debug}*) cfg_causality=1 ;;
         *)         cfg_causality=0 ;;
     esac
+
+    do_debug_log() {
+        echo "$@" >> /mnt/onboard/.addons/miniclock/debuglog.txt
+    }
+
+    if [ "$cfg_debug" = "1" ]
+    then
+        debug_log() {
+            return 0 # yes
+        }
+    else
+        debug_log() {
+            return 1 # no
+        }
+    fi
+
+    debug_log && do_debug_log "-- config file read $(date) --"
+    debug_log && do_debug_log "-- cfg_debug = '$cfg_debug', format {debug} = '$cfg_causality' --"
 
     # patch handling
     if [ ! -e /tmp/MiniClock/patch -a "$cfg_button" == "1" ]
@@ -168,10 +187,12 @@ load_config() {
         then
             sed -i -e 's@/dev/input/event0:keymap=keys/device.qmap:grab=1@/dev/input/event0:keymap=keys/device.qmap:grab=0@' "$libnickel"
             touch /tmp/MiniClock/reboot
+            debug_log && do_debug_log "-- patched libnickel, require reboot --"
         fi
     fi
 
     # whitelist filtering (string to number)
+    debug_log && do_debug_log "-- cfg_whitelist = '$cfg_whitelist' --"
     set -- $cfg_whitelist
     cfg_whitelist=""
     for item in $@
@@ -182,6 +203,7 @@ load_config() {
         [ $# != 2 ] && continue
         cfg_whitelist="$cfg_whitelist $1:$2"
     done
+    debug_log && do_debug_log "-- cfg_whitelist (str2int) = '$cfg_whitelist' --"
 }
 
 # string replace str a b
@@ -259,6 +281,8 @@ nightmode_check() {
 
 update() {
     sleep 0.1
+
+    debug_log && do_debug_log "-- clock update $(date) --"
 
     ( # subshell
 
@@ -369,7 +393,9 @@ check_event() {
             if [ "$item" = "$3:$4" ]
             then
                 # successful
-                [ "$cfg_causality" = 1 ] && causality="$(input_event_int2str $3 $4 | tr ' ' ':') $5"
+                [ "$cfg_causality" = 1 ] && causality="$(input_event_int2str $3 $4 | tr ' ' ':') $5" &&
+                    debug_log && do_debug_log "-- whitelist match -- $causality" ||
+                    debug_log && do_debug_log "-- whitelist match -- $(input_devent_int2str $3 $4 | tr ' ' ':')"
                 return 0
             fi
         done
@@ -389,8 +415,7 @@ debug_event() {
         shift 5
     done
 
-    sleep 3
-    fbink -x 2 -y 2 "$eventstr"
+    debug_log && do_debug_log "$eventstr"
 }
 
 # --- Main: ---
@@ -410,6 +435,7 @@ main() {
 
         if check_event $(devinputeventdump /dev/input/event1 /dev/input/event0)
         then
+           debug_log && do_debug_log "-- cfg_delay = '$cfg_delay' --"
            # event coming in hot
            for i in $cfg_delay
            do
@@ -420,6 +446,8 @@ main() {
         else
            # unknown event, cold
            negative=$(($negative+1))
+
+           debug_log && do_debug_log "-- whitelist not matched - negative $negative --"
 
            # getting cold events in a row? sleep a while.
            if [ "$negative" -ge "${cfg_cooldown% *}" ]
@@ -435,8 +463,10 @@ main() {
                    done
                fi
 
+               debug_log && do_debug_log "-- cooldown start, $(date) --"
                sleep "${cfg_cooldown#* }"
                negative=0
+               debug_log && do_debug_log "-- cooldown end,   $(date) --"
            fi
         fi
     done
