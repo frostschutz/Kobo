@@ -39,7 +39,6 @@ config() {
     fi
 }
 
-
 uninstall_check() {
     if [ "$(config uninstall 0)" = "1" ]
     then
@@ -50,6 +49,7 @@ uninstall_check() {
     fi
 }
 
+# loads a config file but only if it was never loaded or changed since last load
 load_config() {
     [ -z "${config_loaded:-}" ] || grep /mnt/onboard /proc/mounts || return 1 # not mounted
     [ -z "${config_loaded:-}" ] || [ "$CONFIGFILE" -nt /tmp/MiniClock -o "$CONFIGFILE" -ot /tmp/MiniClock ] || return 1 # not changed
@@ -59,11 +59,10 @@ load_config() {
     uninstall_check
     cfg_debug=$(config debug '0')
 
-    cfg_touchscreen=$(config touchscreen '1')
-    cfg_button=$(config button '0')
+    cfg_input_devices=$(printf "/dev/input/event%s " $(config input_devices '1'))
 
     cfg_whitelist=$(config whitelist 'ABS:MT_POSITION_X ABS:MT_POSITION_Y KEY:F23 KEY:F24 KEY:POWER')
-    cfg_cooldown=$(config cooldown '3 30')
+    cfg_cooldown=$(config cooldown '5 30')
 
     cfg_format=$(config format '%a %b %d %H:%M')
     cfg_offset_x=$(config offset_x '0')
@@ -178,7 +177,7 @@ load_config() {
     debug_log && do_debug_log "-- cfg_debug = '$cfg_debug', format {debug} = '$cfg_causality' --"
 
     # patch handling
-    if [ ! -e /tmp/MiniClock/patch -a "$cfg_button" == "1" ]
+    if [ ! -e /tmp/MiniClock/patch -a "$cfg_input_devices" != "${cfg_input_devices/event0/}" ]
     then
         touch /tmp/MiniClock/patch
 
@@ -188,6 +187,12 @@ load_config() {
             sed -i -e 's@/dev/input/event0:keymap=keys/device.qmap:grab=1@/dev/input/event0:keymap=keys/device.qmap:grab=0@' "$libnickel"
             touch /tmp/MiniClock/reboot
             debug_log && do_debug_log "-- patched libnickel, require reboot --"
+            for i in $(seq 60)
+            do
+                # showing this notice is not guaranteed in the main loop, so do it here
+                fbink "MiniClock: Please Reboot for Button Patch"
+                sleep 4
+            done
         fi
     fi
 
@@ -312,8 +317,6 @@ update() {
           "$(my_date +"$cfg_format")"
 
     ) # subshell end / unblock
-
-    [ -e /tmp/MiniClock/reboot ] && fbink "MiniClock: Please Reboot for Button Patch"
 }
 
 # --- Input Event Helpers: ---
@@ -407,7 +410,7 @@ check_event() {
 }
 
 debug_event() {
-    eventstr="MiniClock debug event:"
+    eventstr="MiniClock debug event: [ input_devices = $cfg_input_devices ]"
 
     while [ $# -ge 5 ]
     do
@@ -421,53 +424,59 @@ debug_event() {
 # --- Main: ---
 
 main() {
-    local i=0
-    local x=0
     local negative=0
 
     udev_workarounds
     wait_for_nickel
 
-    while sleep 1
+    while : # main loop
     do
-        load_config
-        nightmode_check
+        while # update loop
+            sleep 0.2 # ratelimit
+            load_config
+            nightmode_check
+            check_event $(devinputeventdump $cfg_input_devices)
+        do
+            # whitelisted event
+            negative=0
+            # kill previous update if unfinished
+            pkill -P $$ && debug_log && do_debug_log "-- killed previous update task --"
+            debug_log && do_debug_log "-- cfg_delay = '$cfg_delay' --"
+            (
+                # runs in background so next event can be listened to already
+                for i in $cfg_delay
+                do
+                    sleep $i
+                    update
+                done
+            ) &
+        done # end update loop
 
-        if check_event $(devinputeventdump /dev/input/event1 /dev/input/event0)
+        # unknown event, cold treatment
+        negative=$(($negative+1))
+        debug_log && do_debug_log "-- whitelist not matched - negative $negative --"
+
+        # getting cold events in a row? sleep a while.
+        if [ "$negative" -ge "${cfg_cooldown% *}" ]
         then
-           debug_log && do_debug_log "-- cfg_delay = '$cfg_delay' --"
-           # event coming in hot
-           for i in $cfg_delay
-           do
-               sleep $i
-               update
-           done
-           negative=0
-        else
-           # unknown event, cold
-           negative=$(($negative+1))
+            negative=0
 
-           debug_log && do_debug_log "-- whitelist not matched - negative $negative --"
+            if [ "$cfg_causality" = 1 ]
+            then
+                # update only to display cooldown {debug}
+                causality="cooldown $cfg_cooldown"
+                (
+                    for i in $cfg_delay
+                    do
+                        sleep $i
+                        update
+                    done
+                ) &
+            fi
 
-           # getting cold events in a row? sleep a while.
-           if [ "$negative" -ge "${cfg_cooldown% *}" ]
-           then
-               if [ "$cfg_causality" = 1 ]
-               then
-                   # update only to display cooldown {debug}
-                   causality="cooldown $cfg_cooldown"
-                   for i in $cfg_delay
-                   do
-                       sleep $i
-                       update
-                   done
-               fi
-
-               debug_log && do_debug_log "-- cooldown start, $(date) --"
-               sleep "${cfg_cooldown#* }"
-               negative=0
-               debug_log && do_debug_log "-- cooldown end,   $(date) --"
-           fi
+            debug_log && do_debug_log "-- cooldown start, $(date) --"
+            sleep "${cfg_cooldown#* }"
+            debug_log && do_debug_log "-- cooldown end,   $(date) --"
         fi
     done
 }
