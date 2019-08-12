@@ -280,21 +280,21 @@ d_int_partitions() {
 
         case "$partition" in
           *p1) # rootfs
-            fbink_render_cntr "200 200 50 50" fa.ttf $'\xef\x84\xa1' # U+F121 fa-code
-            fbink_render_cntr "250 200 100 50" vera.ttf $(h_unit "$psize")
-            ;;
-          *p2) # recoveryfs
-            fbink_render_cntr "200 250 50 50" fa.ttf $'\xef\x93\x8d' # U+F4CD fa-parachute-box
+            fbink_render_cntr "200 250 50 50" fa.ttf $'\xef\x84\xa1' # U+F121 fa-code
             fbink_render_cntr "250 250 100 50" vera.ttf $(h_unit "$psize")
             ;;
-          *p3) # KOBOeReader
-            fbink_render_cntr "200 300 50 50" fa.ttf $'\xef\x80\xad' # U+F02D fa-book
+          *p2) # recoveryfs
+            fbink_render_cntr "200 300 50 50" fa.ttf $'\xef\x93\x8d' # U+F4CD fa-parachute-box
             fbink_render_cntr "250 300 100 50" vera.ttf $(h_unit "$psize")
             ;;
+          *p3) # KOBOeReader
+            fbink_render_cntr "200 350 50 50" fa.ttf $'\xef\x80\xad' # U+F02D fa-book
+            fbink_render_cntr "250 350 100 50" vera.ttf $(h_unit "$psize")
+            ;;
           *) # other?!
-            fbink_render_cntr "200 400 50 50" fa.ttf $'\xef\x81\x99' # U+F059 fa-question-circle
+            fbink_render_cntr "200 150 50 50" fa.ttf $'\xef\x81\x99' # U+F059 fa-question-circle
             pother=$(($pother+$psize))
-            fbink_render_over "250 400 100 50" vera.ttf $(h_unit "$pother")
+            fbink_render_over "250 150 100 50" vera.ttf $(h_unit "$pother")
             ;;
         esac
     done
@@ -302,17 +302,17 @@ d_int_partitions() {
     # kernel
     if [ $pmin -gt 0 ]
     then
-        fbink_render_cntr "200 150 50 50" fa.ttf $'\xef\x95\x84' # U+F544 fa-robot
-        fbink_render_cntr "250 150 100 50" vera.ttf $(h_unit $pmin)
+        fbink_render_cntr "200 200 50 50" fa.ttf $'\xef\x95\x84' # U+F544 fa-robot
+        fbink_render_cntr "250 200 100 50" vera.ttf $(h_unit $pmin)
     fi
 
     # free space
     pfree=$(( $(cat /sys/block/mmcblk0/size)*512 - $pmax ))
     if [ $pfree -gt 0 ]
     then
-        fbink_render_cntr "200 350 50 50" fa.ttf $'\xef\x87\x8e' # U+F1CE fa-circle-notch
-        fbink_render_over "208 358 34 34" vera.ttf "FREE"
-        fbink_render_cntr "250 350 100 50" vera.ttf $(h_unit $pfree)
+        fbink_render_cntr "200 400 50 50" fa.ttf $'\xef\x87\x8e' # U+F1CE fa-circle-notch
+        fbink_render_over "208 408 34 34" vera.ttf "FREE"
+        fbink_render_cntr "250 400 100 50" vera.ttf $(h_unit $pfree)
     fi
 }
 
@@ -356,9 +356,9 @@ d_ext_partitions() {
             fbink_render_cntr "450 200 100 50" vera.ttf $(h_unit "$psize")
             ;;
           *) # other?!
-            fbink_render_cntr "400 250 50 50" fa.ttf $'\xef\x81\x99' # U+F059 fa-question-circle
+            fbink_render_cntr "400 150 50 50" fa.ttf $'\xef\x81\x99' # U+F059 fa-question-circle
             pother=$(($pother+$psize))
-            fbink_render_cntr "450 250 100 50" vera.ttf $(h_unit "$pother")
+            fbink_render_cntr "450 150 100 50" vera.ttf $(h_unit "$pother") --invert
             ;;
         esac
     done
@@ -367,10 +367,15 @@ d_ext_partitions() {
     pfree=$(( $(cat /sys/block/mmcblk1/size)*512 - $pmax ))
     if [ $pfree -gt 0 ]
     then
-        fbink_render_cntr "400 300 50 50" fa.ttf $'\xef\x87\x8e' # U+F1CE fa-circle-notch
-        fbink_render_over "408 308 34 34" vera.ttf "FREE"
-        fbink_render_cntr "450 300 100 50" vera.ttf $(h_unit $pfree)
+        fbink_render_cntr "400 250 50 50" fa.ttf $'\xef\x87\x8e' # U+F1CE fa-circle-notch
+        fbink_render_over "408 258 34 34" vera.ttf "FREE"
+        fbink_render_cntr "450 250 100 50" vera.ttf $(h_unit $pfree)
     fi
+}
+
+# status message
+d_status() {
+    fbink_render_cntr "0 450 550 300" vera.ttf "Hello World!"
 }
 
 # re-draw entire UI
@@ -387,6 +392,9 @@ do_draw_ui() {
     d_ram
     d_sd_int
     d_sd_ext
+
+    # status
+    d_status
 }
 
 draw_ui() {
