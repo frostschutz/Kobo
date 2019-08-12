@@ -15,8 +15,8 @@ parse_prefix() {
     done |
     while read value name
     do
-        [ $prev -gt $value ] && echo "$name appeared out of order: $prev > $value ..." >&2 && continue
-        [ $prev = $value ] && echo -n "/${name#*_}" && continue
+        [ $prev = $value ] && [ ${name%_MAX} = $name ] && echo -n "/${name#*_}" && echo "$name possible conflict..." >&2 && continue
+        [ $prev -ge $value ] && echo "$name appeared out of order: $prev > $value ..." >&2 && continue
         printf "\n"
         prev=$(($prev+1))
         while [ $prev -lt $value ]
