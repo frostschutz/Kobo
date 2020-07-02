@@ -191,13 +191,19 @@ VALUES ('$escapeshelf/', '$escapefile', $today, 'false', 'false');
                 result=$(echo -n "$base" | sed -r -e s"$cfg_series_regexp")
                 echo "-- series_regexp '$base' -> '$result'"
 
+                set --
+
                 if [ "$result" != "$base" ]
                 then
-                    garbage=${result%%:*}
-                    result=${result:$((${#garbage}+1))}
-                    series=${result%%:*}
-                    result=${result:$((${#series}+1))}
-                    number=${result%%:*}
+                    IFS=:
+                    set -- $result
+                    unset IFS
+                fi
+
+                if [ $# -ge 3 ]
+                then
+                    series=$2
+                    number=$3
 
                     echo "
 UPDATE content
