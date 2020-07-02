@@ -74,7 +74,7 @@ autoshelf() {
     today="strftime('%Y-%m-%dT%H:%M:%f')"
 
     echo "
-/* --
+   --
    -- path = '$cfg_path'
    -- skip = '$cfg_skip'
    -- consume = '$cfg_consume'
@@ -85,7 +85,6 @@ autoshelf() {
    -- uninstall = '$cfg_uninstall'
    -- logfile = '$cfg_logfile'
    --
-   -- */
 "
 
     echo "
