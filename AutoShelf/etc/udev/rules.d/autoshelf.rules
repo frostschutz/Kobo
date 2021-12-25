@@ -1,1 +1,2 @@
 SUBSYSTEM=="module", DEVPATH=="/module/g_file_storage", RUN+="/usr/local/AutoShelf/autoshelf.sh"
+SUBSYSTEM=="module", DEVPATH=="/module/g_mass_storage", RUN+="/usr/local/AutoShelf/autoshelf.sh"
