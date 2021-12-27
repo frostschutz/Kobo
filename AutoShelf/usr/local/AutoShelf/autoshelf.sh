@@ -15,6 +15,84 @@ config() {
     [ "$value" != "" ] && echo "$value" || echo "$2"
 }
 
+#
+# touchscreen input file
+#
+TS_GUESS=
+ts_input() {
+    local l
+    local FOUND=
+    local CANDIDATE=/dev/input/event1
+    local EVENT
+    # /proc/bus/input/devices is badly handled
+    # It seems it does not react correctly to the poll syscall (kernel bug?)
+    # A quick workaround would be to use process substitution
+    # but only very recent version of busybox support it.
+    # So going through the fifo option
+    # (perhaps a local copy of the file in /tmp whould have been simplier
+    # but this would have been less fun ;-) )
+    local tempdir="$(mktemp -d)"
+    mkfifo "$tempdir/fifo"
+    cat /proc/bus/input/devices > "$tempdir/fifo" &
+    while read l; do
+	case "$l" in
+        'N: Name="cyttsp5_mt"') FOUND=1;;
+	'N: Name="Elan Touchscreen"') FOUND=1;;
+	'N: Name='*[Tt]ouch[Ss]creen*) FOUND=2;;
+        'H: Handlers='*) EVENT="$(echo "$l" | sed -e 's/.*\(event[0-9]\+\).*/\1/')" ;;
+	'')
+	    case "$FOUND" in
+	    1)
+		echo /dev/input/"$EVENT"
+		rm -rf "$tempdir"
+		return ;;
+	    2)
+		CANDIDATE="/dev/input/$EVENT"
+		;;
+	    esac
+	    FOUND= ;;
+        *) ;;
+	esac
+    done < "$tempdir/fifo"
+    rm -rf "$tempdir"
+    TS_GUESS=1
+    echo "CANDIDATE=$CANDIDATE"
+}
+
+ts_warn() {
+    if [ "$TS_GUESS" != 1 ]; then
+	return
+    fi
+
+    for i in $(seq 1 60)
+    do
+        if [ -e /mnt/onboard/.kobo/KoboReader.sqlite ]
+        then
+            break
+        fi
+
+        sleep 1
+	break
+    done
+
+    if [ ! -e /mnt/onboard/.kobo/KoboReader.sqlite ]; then
+	: return
+    fi
+
+cat > /mnt/onboard/AutoShelf-bugreport.txt <<EOF
+The touchscreen have not been exactly detected.
+To improve AutoShelf, please send the following information to the developpers:
+
+Input devices on the machine:
+$(cat /proc/bus/input/devices)
+
+Machine version:
+$(cat /mnt/onboard/.kobo/version)
+$(uname -a)
+
+EOF
+}
+
 # database escapes
 escape() {
     echo -n "${1//"'"/"''"}"
@@ -241,7 +319,8 @@ then
     grep /mnt/onboard /proc/mounts && exit
     fbink -g file="/usr/local/AutoShelf/autoshelf-off.png"
 
-    while cat /dev/input/event1 | dd bs=1 count=1
+    TS_INPUT="$(ts_input)"
+    while cat "$TS_INPUT" | dd bs=1 count=1
     do
         grep /mnt/onboard /proc/mounts && exit
 
@@ -267,6 +346,7 @@ then
     exit
 elif [ ! -e /tmp/autoshelf-on ]
 then
+    ts_warn
     # disabled mode
     exit
 fi
@@ -284,6 +364,8 @@ do
 
     sleep 1
 done
+
+ts_warn
 
 if [ -e /mnt/onboard/.kobo/KoboReader.sqlite ]
 then
